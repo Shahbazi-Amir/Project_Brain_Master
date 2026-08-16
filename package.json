@@ -10,7 +10,8 @@
     "dev": "node --watch src/server.ts",
     "test": "node --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "ci": "npm run typecheck && npm test"
+    "check:ui": "node --check public/app.js",
+    "ci": "npm run typecheck && npm run check:ui && npm test"
   },
   "devDependencies": {"@types/node": "^22.18.0", "typescript": "^5.9.0"}
 }
