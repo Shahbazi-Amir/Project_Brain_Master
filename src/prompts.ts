@@ -1,8 +1,15 @@
 import { profileGuidance } from "./profiles.ts";
 import type { DirectiveRecord, IterationRecord, ProjectRecord, SupervisorDecision } from "./types.ts";
 
+const persianOutputRule = `LANGUAGE RULE:
+- All human-facing natural-language values and summaries must be written in clear Persian (fa-IR).
+- Keep JSON keys, schema enum values, file paths, code, commands, identifiers, and technical tokens exactly in the format required by the schema or task.
+- Do not translate code or machine-readable enum values.`;
+
 export function architectPrompt(description: string, profileHint: string): string {
   return `You are Project Architect, the discovery and project-definition layer of Project Brain.
+
+${persianOutputRule}
 
 RAW USER IDEA:
 ${description}
@@ -22,6 +29,8 @@ function recentContext(iterations: IterationRecord[]): string {
 
 export function supervisorPrompt(project: ProjectRecord, directives: DirectiveRecord[], iterations: IterationRecord[], memorySnapshot = ""): string {
   return `You are the Supervisor for a long-running project. You do not perform the task yourself. You select the single highest-value next task and specify how an Executor must do it.
+
+${persianOutputRule}
 
 PROJECT DEFINITION:
 ${JSON.stringify(project.definition, null, 2)}
@@ -56,6 +65,8 @@ Rules:
 export function executorPrompt(project: ProjectRecord, decision: SupervisorDecision): string {
   return `You are the Executor. Perform the assigned task in the provided workspace. The Supervisor owns scope and acceptance criteria; you may not redefine them.
 
+${persianOutputRule}
+
 PROJECT: ${project.definition.name}
 PROFILE: ${project.profile}
 
@@ -89,6 +100,8 @@ Work directly on durable artifacts in the workspace when the task requires file 
 
 export function reviewerPrompt(project: ProjectRecord, decision: SupervisorDecision, executorResult: string, directives: DirectiveRecord[], iterations: IterationRecord[], memorySnapshot = ""): string {
   return `You are an independent Reviewer. Judge the Executor result against the approved project definition and the Supervisor's acceptance criteria. Do not reward shortcuts or merely persuasive reports.
+
+${persianOutputRule}
 
 PROJECT DEFINITION:
 ${JSON.stringify(project.definition, null, 2)}

@@ -24,17 +24,65 @@ function runProcess(command: string, args: string[], cwd: string, signal?: Abort
   });
 }
 
-export interface CodexHealth { available: boolean; authenticated: boolean; version: string; authStatus: string; error: string; }
+export function buildCodexArgs(options: AgentRunOptions, outputPath: string, schemaPath: string): string[] {
+  // Approval and web-search are global Codex flags. They must appear before the
+  // `exec` subcommand in current Codex CLI releases (including 0.147.x).
+  const args = ["--ask-for-approval", "never"];
+  if (options.useWebSearch) args.push("--search");
+
+  args.push(
+    "exec",
+    "--json",
+    "--sandbox", options.sandbox,
+    "--output-last-message", outputPath
+  );
+  if (options.schema) args.push("--output-schema", schemaPath);
+  args.push("--skip-git-repo-check", options.prompt);
+  return args;
+}
+
+export interface CodexHealth {
+  available: boolean;
+  authenticated: boolean;
+  compatible: boolean;
+  version: string;
+  authStatus: string;
+  error: string;
+}
 
 export class CodexProvider {
   async health(): Promise<CodexHealth> {
     try {
       const version = await runProcess(config.codexCommand, ["--version"], process.cwd(), undefined, 10_000);
-      if (version.code !== 0) return { available: false, authenticated: false, version: "", authStatus: "", error: version.stderr.trim() || "Codex CLI unavailable" };
-      const auth = await runProcess(config.codexCommand, ["login", "status"], process.cwd(), undefined, 10_000);
-      return { available: true, authenticated: auth.code === 0, version: version.stdout.trim() || version.stderr.trim(), authStatus: auth.stdout.trim() || auth.stderr.trim(), error: auth.code === 0 ? "" : (auth.stderr.trim() || "Codex is not logged in") };
+      if (version.code !== 0) return { available: false, authenticated: false, compatible: false, version: "", authStatus: "", error: version.stderr.trim() || "Codex CLI unavailable" };
+
+      const [auth, globalHelp, execHelp] = await Promise.all([
+        runProcess(config.codexCommand, ["login", "status"], process.cwd(), undefined, 10_000),
+        runProcess(config.codexCommand, ["--help"], process.cwd(), undefined, 10_000),
+        runProcess(config.codexCommand, ["exec", "--help"], process.cwd(), undefined, 10_000)
+      ]);
+      const globalText = `${globalHelp.stdout}\n${globalHelp.stderr}`;
+      const execText = `${execHelp.stdout}\n${execHelp.stderr}`;
+      const compatible = globalHelp.code === 0 && execHelp.code === 0
+        && globalText.includes("--ask-for-approval")
+        && execText.includes("--json")
+        && execText.includes("--sandbox")
+        && execText.includes("--output-last-message")
+        && execText.includes("--output-schema");
+      const error = !compatible
+        ? "Installed Codex CLI is missing required automation flags"
+        : auth.code === 0 ? "" : (auth.stderr.trim() || auth.stdout.trim() || "Codex is not logged in");
+
+      return {
+        available: true,
+        authenticated: auth.code === 0,
+        compatible,
+        version: version.stdout.trim() || version.stderr.trim(),
+        authStatus: auth.stdout.trim() || auth.stderr.trim(),
+        error
+      };
     } catch (error) {
-      return { available: false, authenticated: false, version: "", authStatus: "", error: error instanceof Error ? error.message : String(error) };
+      return { available: false, authenticated: false, compatible: false, version: "", authStatus: "", error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -44,10 +92,7 @@ export class CodexProvider {
     const outputPath = join(config.dataDir, "tmp", `${id}.out.json`);
     const schemaPath = join(config.dataDir, "tmp", `${id}.schema.json`);
     if (options.schema) writeFileSync(schemaPath, JSON.stringify(options.schema), "utf8");
-    const args = ["exec", "--json", "--sandbox", options.sandbox, "--ask-for-approval", "never", "--output-last-message", outputPath];
-    if (options.schema) args.push("--output-schema", schemaPath);
-    if (options.useWebSearch) args.push("--search");
-    args.push("--skip-git-repo-check", options.prompt);
+    const args = buildCodexArgs(options, outputPath, schemaPath);
 
     try {
       const result = await runProcess(config.codexCommand, args, options.cwd, options.signal);
