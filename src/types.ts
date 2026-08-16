@@ -3,6 +3,8 @@ export type ProjectStatus = "DRAFT" | "READY" | "RUNNING" | "PAUSED" | "NEEDS_HU
 export type ExecutorMode = "codex" | "manual";
 export type IterationStatus = "RUNNING" | "AWAITING_MANUAL_RESULT" | "PASSED" | "FAILED" | "NEEDS_HUMAN" | "INTERRUPTED";
 export type ReviewStatus = "PASS" | "FAIL" | "PARTIAL";
+export type FactSource = "user_explicit" | "architect_inference";
+export type SelectionMode = "single" | "multiple";
 
 export interface ProjectDefinition {
   name: string;
@@ -31,13 +33,30 @@ export interface ProjectDefinition {
   desiredImpact?: string;
   deliveryFormats?: string[];
   executionStrategy?: string;
+  executionContract?: ExecutionContract;
 }
 
+export interface ChoiceOption { id: string; label: string; note: string; }
+export interface IdeaFact {
+  id: string;
+  label: string;
+  source: FactSource;
+  whyItMatters: string;
+  selectionMode: SelectionMode;
+  options: ChoiceOption[];
+  selectedOptionIds: string[];
+  allowDetails: boolean;
+}
 export interface DiscoveryQuestion {
   id: string;
   question: string;
   why: string;
-  answerHint: string;
+  selectionMode: SelectionMode;
+  options: ChoiceOption[];
+  selectedOptionIds: string[];
+  required: boolean;
+  allowDetails: boolean;
+  detailsPrompt: string;
 }
 export interface DiscoveryApproach { name: string; description: string; tradeoffs: string; }
 export interface DiscoveryResult {
@@ -51,6 +70,7 @@ export interface DiscoveryResult {
   suggestedProfile: ProjectProfile;
   suggestedGoals: string[];
   possibleApproaches: DiscoveryApproach[];
+  facts: IdeaFact[];
   keyAssumptions: string[];
   estimatedComplexity: "low" | "medium" | "high" | "very_high";
   estimatedWorkload: string;
@@ -67,6 +87,22 @@ export interface ExecutionStage {
   outputs: string[];
   doneWhen: string;
 }
+export interface RiskFallback { risk: string; impact: string; fallback: string; }
+export interface ExecutionContract {
+  feasibility: "ready" | "conditional" | "blocked";
+  feasibilitySummary: string;
+  estimatedIterations: number;
+  estimatedTime: string;
+  timeAssumptions: string[];
+  requiredInputs: string[];
+  externalCosts: string[];
+  rightsAndPermissionChecks: string[];
+  systemCommitments: string[];
+  userCommitments: string[];
+  reviewCheckpoints: string[];
+  stopConditions: string[];
+  risksAndFallbacks: RiskFallback[];
+}
 export interface MaturationResult {
   finalProfile: ProjectProfile;
   clarifiedIdea: string;
@@ -80,6 +116,7 @@ export interface MaturationResult {
   executionStages: ExecutionStage[];
   recommendedDeliveryFormats: string[];
   executionRisks: string[];
+  executionContract: ExecutionContract;
   finalDefinition: ProjectDefinition;
 }
 

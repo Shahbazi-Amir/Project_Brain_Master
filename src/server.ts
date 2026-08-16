@@ -24,14 +24,21 @@ function serveStatic(pathname: string, res: ServerResponse): boolean {
   text(res, 200, readFileSync(path, "utf8"), types[extname(path)] ?? "application/octet-stream"); return true;
 }
 function requireDefinition(value: unknown): ProjectDefinition {
-  if (!value || typeof value !== "object") throw new Error("definition is required"); const d = value as ProjectDefinition;
-  if (!d.name || !d.primaryGoal || !Array.isArray(d.successCriteria)) throw new Error("definition is incomplete"); return d;
+  if (!value || typeof value !== "object") throw new Error("تعریف پروژه لازم است"); const d = value as ProjectDefinition;
+  if (!d.name || !d.primaryGoal || !Array.isArray(d.successCriteria)) throw new Error("تعریف پروژه کامل نیست");
+  if (Array.isArray(d.humanDecisionsRequired) && d.humanDecisionsRequired.length) throw new Error("قبل از ساخت پروژه، تصمیم‌های بازِ مهم را روشن کن");
+  return d;
 }
 function requireDiscovery(value: unknown): DiscoveryResult {
-  if (!value || typeof value !== "object") throw new Error("discovery is required");
+  if (!value || typeof value !== "object") throw new Error("تصویر اولیه ایده لازم است");
   const d = value as DiscoveryResult;
-  if (!d.understanding || !Array.isArray(d.questions) || !d.draftDefinition) throw new Error("discovery is incomplete");
+  if (!d.understanding || !Array.isArray(d.questions) || !Array.isArray(d.facts) || !d.draftDefinition) throw new Error("تصویر اولیه ایده کامل نیست");
   return d;
+}
+function requireProfile(value: unknown): ProjectProfile {
+  const profile = String(value ?? "general") as ProjectProfile;
+  if (!["coding", "writing", "research", "planning", "general"].includes(profile)) throw new Error("ماهیت پروژه معتبر نیست");
+  return profile;
 }
 
 const server = createServer(async (req, res) => {
@@ -39,54 +46,64 @@ const server = createServer(async (req, res) => {
     const method = req.method ?? "GET"; const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`); const path = url.pathname;
     if (method === "GET" && path === "/api/health") return json(res, 200, { ok: true, codex: await codexProvider.health(), node: process.version, dataDir: config.dataDir, maxLoopIterations: config.defaultMaxIterations });
     if (method === "GET" && path === "/api/projects") return json(res, 200, { projects: listProjects() });
+
     if (method === "POST" && path === "/api/discover") {
-      const body = await bodyJson(req); const description = String(body.description ?? "").trim(); if (description.length < 10) throw new Error("Describe the project in at least 10 characters");
-      const run = await runArchitect(description, String(body.profileHint ?? ""), Boolean(body.useWebSearch)); return json(res, 200, { discovery: run.structured, usage: run.usage });
+      const body = await bodyJson(req); const description = String(body.description ?? "").trim();
+      if (description.length < 10) throw new Error("ایده را کمی کامل‌تر توضیح بده");
+      const run = await runArchitect(description, String(body.profileHint ?? ""), Boolean(body.useWebSearch));
+      return json(res, 200, { discovery: run.structured, usage: run.usage });
     }
+
     if (method === "POST" && path === "/api/refine") {
-      const body = await bodyJson(req); const description = String(body.description ?? "").trim(); if (description.length < 10) throw new Error("description is required");
+      const body = await bodyJson(req); const description = String(body.description ?? "").trim();
+      if (description.length < 10) throw new Error("شرح ایده لازم است");
       const discovery = requireDiscovery(body.discovery); const rawAnswers = body.answers;
-      if (!rawAnswers || typeof rawAnswers !== "object" || Array.isArray(rawAnswers)) throw new Error("answers are required");
+      if (!rawAnswers || typeof rawAnswers !== "object" || Array.isArray(rawAnswers)) throw new Error("بازبینی برداشت‌ها و پاسخ‌ها لازم است");
       const answers = Object.fromEntries(Object.entries(rawAnswers as Record<string, unknown>).map(([key, value]) => [key, String(value ?? "").trim()]));
-      const unanswered = discovery.questions.filter(q => !answers[q.id]);
-      if (unanswered.length) throw new Error(`Answer all clarification questions before maturation (${unanswered.length} remaining)`);
+      const unreviewedFacts = discovery.facts.filter(f => !answers[`fact:${f.id}`]);
+      if (unreviewedFacts.length) throw new Error(`برداشت‌های اولیه را مرور کن (${unreviewedFacts.length} مورد باقی مانده)`);
+      const unanswered = discovery.questions.filter(q => q.required && !answers[q.id]);
+      if (unanswered.length) throw new Error(`به سؤال‌های ضروری پاسخ بده (${unanswered.length} مورد باقی مانده)`);
       const run = await runMaturation(description, discovery, answers, String(body.profileHint ?? discovery.suggestedProfile ?? ""), Boolean(body.useWebSearch));
       return json(res, 200, { maturation: run.structured, usage: run.usage, maxLoopIterations: config.defaultMaxIterations });
     }
+
     if (method === "POST" && path === "/api/projects") {
       const body = await bodyJson(req); const id = crypto.randomUUID(); const definition = requireDefinition(body.definition); const now = new Date().toISOString();
-      const profile = String(body.profile ?? "general") as ProjectProfile; const executorMode = String(body.executorMode ?? "codex") as ExecutorMode;
+      const profile = requireProfile(body.profile); const executorMode = String(body.executorMode ?? "codex") as ExecutorMode;
       const project: ProjectRecord = {
         id, name: definition.name, profile, description: String(body.description ?? ""), status: "READY", definition,
         workspacePath: resolveWorkspace(id, String(body.workspacePath ?? "")), executorMode,
         minQualityScore: Math.min(100, Math.max(1, Number(body.minQualityScore ?? config.defaultMinQuality))),
-        maxIterations: Math.min(13, Math.max(1, Number(body.maxIterations ?? config.defaultMaxIterations))), maxStagnantIterations: Math.min(10, Math.max(1, Number(body.maxStagnantIterations ?? 3))),
+        maxIterations: Math.min(13, Math.max(1, Number(body.maxIterations ?? config.defaultMaxIterations))),
+        maxStagnantIterations: Math.min(10, Math.max(1, Number(body.maxStagnantIterations ?? 3))),
         createdAt: now, updatedAt: now
       };
       insertProject(project); initializeProjectStorage(project); return json(res, 201, projectPayload(id));
     }
 
     const projectMatch = path.match(/^\/api\/projects\/([^/]+)$/);
-    if (method === "GET" && projectMatch) { const payload = projectPayload(projectMatch[1]); return payload ? json(res, 200, payload) : json(res, 404, { error: "Project not found" }); }
+    if (method === "GET" && projectMatch) { const payload = projectPayload(projectMatch[1]); return payload ? json(res, 200, payload) : json(res, 404, { error: "پروژه پیدا نشد" }); }
     const actionMatch = path.match(/^\/api\/projects\/([^/]+)\/(directives|run-once|run-loop|pause|stop|manual-result)$/);
     if (method === "POST" && actionMatch) {
-      const [, id, action] = actionMatch; const project = getProject(id); if (!project) return json(res, 404, { error: "Project not found" });
+      const [, id, action] = actionMatch; const project = getProject(id); if (!project) return json(res, 404, { error: "پروژه پیدا نشد" });
       if (action === "directives") {
-        const body = await bodyJson(req); const value = String(body.text ?? "").trim(); if (!value) throw new Error("Directive cannot be empty");
+        const body = await bodyJson(req); const value = String(body.text ?? "").trim(); if (!value) throw new Error("دستور نمی‌تواند خالی باشد");
         const directive: DirectiveRecord = { id: crypto.randomUUID(), projectId: id, text: value, active: true, createdAt: new Date().toISOString() };
         addDirective(directive); appendDirectiveToMemory(id, directive); return json(res, 201, directive);
       }
       if (action === "run-once" || action === "run-loop") {
-        const count = action === "run-once" ? 1 : Math.min(13, project.maxIterations); void loopController.run(id, count).catch(error => console.error("Project run failed", id, error));
+        const count = action === "run-once" ? 1 : Math.min(13, project.maxIterations);
+        void loopController.run(id, count).catch(error => console.error("Project run failed", id, error));
         return json(res, 202, { started: true, iterations: count });
       }
       if (action === "pause") { const stopped = loopController.stop(id, "PAUSED"); if (!stopped) setProjectStatus(id, "PAUSED"); return json(res, 200, { paused: true }); }
       if (action === "stop") { const stopped = loopController.stop(id, "STOPPED"); if (!stopped) setProjectStatus(id, "STOPPED"); return json(res, 200, { stopped: true }); }
-      if (action === "manual-result") { const body = await bodyJson(req); const result = String(body.result ?? "").trim(); if (!result) throw new Error("Manual result cannot be empty"); return json(res, 200, { review: await loopController.submitManualResult(id, result) }); }
+      if (action === "manual-result") { const body = await bodyJson(req); const result = String(body.result ?? "").trim(); if (!result) throw new Error("نتیجه اجرای دستی خالی است"); return json(res, 200, { review: await loopController.submitManualResult(id, result) }); }
     }
 
     if (method === "GET" && !path.startsWith("/api/") && serveStatic(path, res)) return;
-    return json(res, 404, { error: "Not found" });
+    return json(res, 404, { error: "مسیر پیدا نشد" });
   } catch (error) { return json(res, 400, { error: error instanceof Error ? error.message : String(error) }); }
 });
 
