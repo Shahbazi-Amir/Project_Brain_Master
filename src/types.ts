@@ -68,6 +68,7 @@ export interface ExecutionStage {
   doneWhen: string;
 }
 export interface MaturationResult {
+  finalProfile: ProjectProfile;
   clarifiedIdea: string;
   productDefinition: string;
   valueProposition: string;
