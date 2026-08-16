@@ -12,7 +12,20 @@ test("supervisor prompt includes active human directive", () => {
 });
 
 test("executor prompt carries anti-shortcut constraints", () => {
-  const decision = { taskTitle:"Fix", objective:"Fix it", relevantContext:[], constraints:[], mustPreserve:["API"], acceptanceCriteria:["tests pass"], verificationSteps:["run tests"], forbiddenActions:["disable tests"], expectedOutput:"patch" } as SupervisorDecision;
+  const decision: SupervisorDecision = {
+    taskTitle: "Fix",
+    objective: "Fix it",
+    reasoningSummary: "The failing behavior should be repaired without changing the API.",
+    relevantContext: [],
+    constraints: [],
+    mustPreserve: ["API"],
+    acceptanceCriteria: ["tests pass"],
+    verificationSteps: ["run tests"],
+    forbiddenActions: ["disable tests"],
+    expectedOutput: "patch",
+    recommendedAction: "EXECUTE",
+    userQuestion: ""
+  };
   const text = executorPrompt(project, decision);
   assert.match(text, /disable tests/);
   assert.match(text, /tests pass/);
