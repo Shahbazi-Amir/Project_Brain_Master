@@ -1,9 +1,9 @@
 {
   "name": "project-brain-master",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Local-first project operating system that supervises Codex-powered execution loops.",
+  "description": "Local-first project operating system that frames, matures, supervises and reviews Codex-powered project execution.",
   "engines": {"node": ">=22.18.0 <23 || >=24.12.0 <25"},
   "scripts": {
     "start": "node src/server.ts",

@@ -25,16 +25,33 @@ export interface ProjectDefinition {
   estimatedComplexity: "low" | "medium" | "high" | "very_high";
   estimatedWorkload: string;
   humanDecisionsRequired: string[];
+  coreIdea?: string;
+  problemOrOpportunity?: string;
+  valueProposition?: string;
+  desiredImpact?: string;
+  deliveryFormats?: string[];
+  executionStrategy?: string;
 }
 
-export interface DiscoveryQuestion { id: string; question: string; why: string; }
+export interface DiscoveryQuestion {
+  id: string;
+  question: string;
+  why: string;
+  answerHint: string;
+}
 export interface DiscoveryApproach { name: string; description: string; tradeoffs: string; }
 export interface DiscoveryResult {
   understanding: string;
+  ideaEssence: string;
+  problemOrOpportunity: string;
+  intendedProduct: string;
+  valueProposition: string;
+  desiredImpact: string;
   suggestedProjectType: string;
   suggestedProfile: ProjectProfile;
   suggestedGoals: string[];
   possibleApproaches: DiscoveryApproach[];
+  keyAssumptions: string[];
   estimatedComplexity: "low" | "medium" | "high" | "very_high";
   estimatedWorkload: string;
   researchNeeded: boolean;
@@ -42,6 +59,28 @@ export interface DiscoveryResult {
   missingInformation: string[];
   questions: DiscoveryQuestion[];
   draftDefinition: ProjectDefinition;
+}
+
+export interface ExecutionStage {
+  title: string;
+  purpose: string;
+  outputs: string[];
+  doneWhen: string;
+}
+export interface MaturationResult {
+  finalProfile: ProjectProfile;
+  clarifiedIdea: string;
+  productDefinition: string;
+  valueProposition: string;
+  desiredImpact: string;
+  whatChanged: string[];
+  resolvedDecisions: string[];
+  remainingAssumptions: string[];
+  recommendedApproach: { name: string; why: string };
+  executionStages: ExecutionStage[];
+  recommendedDeliveryFormats: string[];
+  executionRisks: string[];
+  finalDefinition: ProjectDefinition;
 }
 
 export interface SupervisorDecision {
