@@ -33,6 +33,7 @@ export interface ProjectDefinition {
   desiredImpact?: string;
   deliveryFormats?: string[];
   executionStrategy?: string;
+  executionContract?: ExecutionContract;
 }
 
 export interface ChoiceOption { id: string; label: string; note: string; }
