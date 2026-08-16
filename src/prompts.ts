@@ -20,7 +20,7 @@ function recentContext(iterations: IterationRecord[]): string {
   return iterations.slice(0, 3).map(i => `Iteration ${i.number}: status=${i.status}; decision=${i.decision}; review=${i.reviewer ? `${i.reviewer.score}/100 ${i.reviewer.status}; ${i.reviewer.recommendedNextAction}` : "none"}`).join("\n");
 }
 
-export function supervisorPrompt(project: ProjectRecord, directives: DirectiveRecord[], iterations: IterationRecord[]): string {
+export function supervisorPrompt(project: ProjectRecord, directives: DirectiveRecord[], iterations: IterationRecord[], memorySnapshot = ""): string {
   return `You are the Supervisor for a long-running project. You do not perform the task yourself. You select the single highest-value next task and specify how an Executor must do it.
 
 PROJECT DEFINITION:
@@ -28,6 +28,9 @@ ${JSON.stringify(project.definition, null, 2)}
 
 PROJECT PROFILE GUIDANCE:
 ${profileGuidance(project.profile)}
+
+PROJECT MEMORY SNAPSHOT:
+${memorySnapshot || "No additional project memory yet."}
 
 WORKSPACE:
 ${project.workspacePath}
@@ -40,6 +43,7 @@ ${recentContext(iterations)}
 
 Rules:
 - Preserve approved scope and explicit constraints.
+- Use project memory to preserve prior decisions, style, research, lessons and continuity.
 - Never lower the acceptance bar just to declare success.
 - Select one coherent task, not a vague multi-day bundle.
 - If a material decision is missing, choose ASK_USER and ask one decisive question.
@@ -80,10 +84,10 @@ ${decision.forbiddenActions.map(v => `- ${v}`).join("\n")}
 EXPECTED OUTPUT:
 ${decision.expectedOutput}
 
-Work directly on durable artifacts in the workspace when the task requires file changes. Verify your work before finishing. Report what changed, what was verified, and anything still uncertain. Do not claim checks passed unless you actually ran or directly verified them.`;
+Work directly on durable artifacts in the workspace when the task requires file changes. For Project Brain internal workspaces, project memory files live in the same workspace and are authoritative context; do not casually overwrite them. Verify your work before finishing. Report what changed, what was verified, and anything still uncertain. Do not claim checks passed unless you actually ran or directly verified them.`;
 }
 
-export function reviewerPrompt(project: ProjectRecord, decision: SupervisorDecision, executorResult: string, directives: DirectiveRecord[], iterations: IterationRecord[]): string {
+export function reviewerPrompt(project: ProjectRecord, decision: SupervisorDecision, executorResult: string, directives: DirectiveRecord[], iterations: IterationRecord[], memorySnapshot = ""): string {
   return `You are an independent Reviewer. Judge the Executor result against the approved project definition and the Supervisor's acceptance criteria. Do not reward shortcuts or merely persuasive reports.
 
 PROJECT DEFINITION:
@@ -91,6 +95,9 @@ ${JSON.stringify(project.definition, null, 2)}
 
 PROFILE GUIDANCE:
 ${profileGuidance(project.profile)}
+
+PROJECT MEMORY SNAPSHOT:
+${memorySnapshot || "No additional project memory yet."}
 
 ACTIVE HUMAN DIRECTIVES:
 ${directives.length ? directives.map(d => `- ${d.text}`).join("\n") : "- none"}
@@ -106,6 +113,7 @@ ${recentContext(iterations)}
 
 Review rules:
 - Score 0-100 against actual requirements, not effort.
+- Check continuity with project memory, prior decisions, style and research constraints.
 - PASS requires the assigned task acceptance criteria to be satisfied.
 - projectComplete=true only when the whole Project Definition success criteria are satisfied, not merely this task.
 - If required evidence is missing, say so and lower the score.
