@@ -9,7 +9,7 @@ test("structured schemas forbid undeclared top-level properties", () => {
   assert.equal(reviewerSchema.additionalProperties, false);
 });
 
-test("discovery carries editable facts and option based questions", () => {
+test("discovery carries editable option based questions", () => {
   assert.ok("facts" in discoverySchema.properties);
   assert.ok("questions" in discoverySchema.properties);
   const question = discoverySchema.properties.questions.items;
@@ -18,10 +18,17 @@ test("discovery carries editable facts and option based questions", () => {
   assert.ok("selectionMode" in question.properties);
 });
 
-test("maturation carries bounded execution contract", () => {
+test("maturation carries bounded engineering execution contract", () => {
   assert.ok("executionContract" in maturationSchema.properties);
   const contract = maturationSchema.properties.executionContract;
   assert.equal(contract.properties.estimatedIterations.maximum, 13);
   assert.ok("risksAndFallbacks" in contract.properties);
-  assert.ok("rightsAndPermissionChecks" in contract.properties);
+  assert.ok("workspacePlan" in contract.properties);
+  assert.ok("monitoringPlan" in contract.properties);
+  assert.ok("executionBrief" in contract.properties);
+});
+
+test("project definition supports resource references", () => {
+  const definition = maturationSchema.properties.finalDefinition;
+  assert.ok("resourceReferences" in definition.properties);
 });

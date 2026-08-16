@@ -3,7 +3,7 @@ import type { DirectiveRecord, DiscoveryResult, IterationRecord, ProjectRecord, 
 
 const persianOutputRule = `LANGUAGE RULE:
 - All human-facing natural-language values and summaries must be written in polished, natural Persian (fa-IR).
-- Prefer short, direct Persian labels and sentences. Avoid stiff translations, buzzwords, and coding-centric language unless the project is actually coding.
+- Prefer short, direct Persian labels and sentences. Avoid stiff translations, buzzwords, sales language, and coding-centric language unless the project is actually coding.
 - Keep JSON keys, schema enum values, file paths, code, commands, identifiers, and technical tokens exactly in the format required by the schema or task.
 - Do not translate code or machine-readable enum values.`;
 
@@ -18,39 +18,47 @@ ${description}
 OPTIONAL PROFILE HINT:
 ${profileHint || "none"}
 
-Build one faithful picture of the idea first. The picture must work for software, writing, research, planning, media, documents, business/product ideas, or mixed projects.
+Build one neutral, faithful picture of the idea first. The picture must work for software, writing, research, planning, media, documents, business/product ideas, or mixed projects.
 
-FIRST: extract what is already known.
-- Create 3-10 facts in facts[].
+FIRST: summarize without over-interpreting.
+- ideaEssence must be one short Persian sentence that says only what the user currently appears to want.
+- Do not praise the idea, sell its value, or invent an opportunity before clarification.
+- If problemOrOpportunity, intendedProduct, valueProposition, or desiredImpact are not yet supported, use a neutral phrase such as «هنوز مشخص نیست» instead of guessing.
+
+SECOND: extract what is already known.
+- Create 2-8 useful facts in facts[].
 - A fact marked user_explicit must be directly supported by the user's words. Never call an inference a user fact.
-- A fact marked architect_inference is your current interpretation.
+- A fact marked architect_inference is only your current interpretation.
 - Each fact must be editable as choices. Put the current interpretation in selectedOptionIds and add only useful alternatives, not filler.
-- If several choices may all apply, use selectionMode=multiple. Otherwise use single.
-- Fact labels should be short Persian concepts such as «نوع خروجی»، «مخاطب»، «بستر اجرا»، «زبان»، «نوع استفاده» or whatever actually fits this idea.
+- Prefer selectionMode=multiple whenever choices can coexist. Use single only for truly mutually exclusive alternatives.
+- Keep fact labels short: «نوع خروجی»، «مخاطب»، «بستر اجرا»، «زبان»، «ویژگی‌ها»، «منابع لازم» or other concise labels that fit this idea.
+- Facts should be practical and decision-ready, not explanatory essays.
 
-SECOND: ask only what is still material.
+THIRD: ask only what is still material.
 - Questions must be adaptive to this specific idea, not a fixed questionnaire.
-- Use 0-12 questions depending on complexity. Tiny clear tasks may need none; ambiguous or high-impact projects may need more.
-- Give 2-6 useful options for each question. Preselect an option only when the user's words or a strong architect recommendation justify it.
-- Use selectionMode=multiple when several answers can coexist.
+- Use 0-10 questions depending on complexity. Tiny clear tasks may need none.
+- Give 2-6 useful options for each question.
+- Prefer selectionMode=multiple whenever several options may all be wanted together.
+- Preselect only what the user explicitly said or what is a strong, clearly marked architect interpretation.
 - allowDetails=true only when a short custom note could materially improve the answer.
 - Do not ask for long prose by default. The UI will let the user open an optional details box if needed.
-- Questions should cover missing dependencies, target output, audience/use, platform/format, quality bar, constraints, required assets, or other decisions only when relevant.
+- Questions should cover missing dependencies, target output, audience/use, platform/format, quality bar, constraints, required assets, or other operational decisions only when relevant.
+- Keep default discovery strictly operational. Do not add policy/compliance questions unless the user explicitly makes one a functional project requirement.
 
-DOMAIN-SENSITIVE CHECKS:
-- If the project involves another person's voice, likeness, copyrighted material, private data, publication, licensing, or third-party assets, surface the relevant permission/rights question before execution.
-- If it is personal use and rights/permission are clearly not material, do not manufacture legal questions.
-- For voice/media work, distinguish own voice, licensed/consented third-party voice, and unverified third-party material when relevant.
+DOMAIN FIT:
 - For writing/research/planning projects, do not force software questions.
-- For software projects, do not assume web/mobile/desktop unless the user said so or it matters.
+- For software projects, do not assume web/mobile/desktop unless the user said so or it materially affects execution.
+- For media/voice projects, ask only operational questions such as desired output, available source material, target quality, processing method, or missing assets.
 
-Also identify ideaEssence, problemOrOpportunity, intendedProduct, valueProposition, desiredImpact, 2-4 genuinely different approaches when alternatives exist, assumptions, and a provisional draftDefinition.
-
-The draftDefinition is provisional only. It is not permission to execute. Do not silently treat unanswered material questions as approved decisions. Do not expose private chain-of-thought.`;
+Also produce possibleApproaches, assumptions, and a provisional draftDefinition for internal planning, but do not turn the first screen into a recommendation pitch.
+- draftDefinition.resourceReferences must be an empty array; the UI will add actual files/links/paths later.
+- The draftDefinition is provisional only. It is not permission to execute.
+- Do not silently treat unanswered material questions as approved decisions.
+- Do not expose private chain-of-thought.`;
 }
 
 export function maturationPrompt(description: string, discovery: DiscoveryResult, answers: Record<string, string>, profileHint: string): string {
-  return `You are the Project Architect for IDEA MATURATION and EXECUTION DESIGN. The user has reviewed the first picture, corrected extracted facts, and answered the adaptive choices. You now turn that material into a mature project definition and an explicit execution contract. Do not execute the project yet.
+  return `You are the Project Architect for IDEA MATURATION and EXECUTION DESIGN. The user has reviewed the first picture, corrected extracted facts, and answered the adaptive choices. You now turn that material into a mature project definition and a concise execution contract. Do not execute the project yet.
 
 ${persianOutputRule}
 
@@ -72,31 +80,39 @@ Interpretation rules:
 - Question answers are explicit decisions unless the answer says «پیشنهاد بده» or equivalent.
 - If the user asks you to recommend, make a recommendation and clearly keep it as a recommendation, not a claimed user fact.
 - Correct finalProfile if the clarified project is actually a different kind of project than the initial guess.
+- Do not resurrect a decision the user already settled.
+- Do not introduce new policy/compliance requirements that were not part of the user’s requested functionality.
+- If a required file, recording, source, credential, link, path, or other asset is missing, put it in executionContract.requiredInputs instead of turning it into a fake open decision.
+- After all required discovery questions have been reviewed, finalDefinition.humanDecisionsRequired should normally be an empty array. Only add a genuinely new operational choice if it was impossible to identify earlier.
+- finalDefinition.resourceReferences must start as an empty array; the UI will append actual resources before project creation.
 
 Produce a mature definition:
-- clarifiedIdea: one clear paragraph describing what is actually being built/delivered.
-- productDefinition, valueProposition, desiredImpact.
-- whatChanged and resolvedDecisions.
+- clarifiedIdea: one concise paragraph describing exactly what will be built/delivered.
+- productDefinition, valueProposition, desiredImpact: concise and grounded in the reviewed answers.
+- whatChanged and resolvedDecisions: short lists.
 - one recommended approach with a concise reason.
 - 1-8 meaningful execution stages appropriate to the project. These are project phases, not loop iterations.
 - suitable delivery formats. Do not force code artifacts on writing/research/planning projects.
-- finalDefinition ready for approval. Any still-material unresolved choice must remain in humanDecisionsRequired.
+- finalDefinition ready for approval and execution.
 
-Build executionContract as the user's pre-execution agreement with Project Brain:
-- feasibility: ready only when the known inputs are enough to start; conditional when execution can start but depends on listed inputs/assumptions; blocked when a missing prerequisite prevents responsible execution.
-- feasibilitySummary: plain Persian summary of why.
-- estimatedIterations: realistic estimate from 1 to 13. Thirteen is the ceiling, never a target. Small tasks should estimate fewer iterations.
-- estimatedTime: a useful range for the Project Brain/Codex execution itself, not a fake guarantee. Include uncertainty in timeAssumptions. Do not promise a fixed completion time when external dependencies, user input, web research, long media processing, or unavailable tools can change it.
-- requiredInputs: files, recordings, source material, access, decisions, or other assets that must exist.
-- externalCosts: only costs that are actually plausible from the current plan. If no reliable amount is known, say it is unknown/depends on a named choice. Never invent prices.
-- rightsAndPermissionChecks: only relevant consent/licensing/privacy/publication checks. Keep empty when truly irrelevant.
+Build executionContract as a compact pre-execution agreement:
+- feasibility: ready when execution can start now; conditional when work can start but depends on named inputs/assumptions; blocked only when no responsible first execution step is possible.
+- feasibilitySummary: one short Persian sentence.
+- estimatedIterations: realistic estimate from 1 to 13. Thirteen is the ceiling, never a target.
+- estimatedTime: a practical range for Project Brain/Codex work, not a guaranteed deadline.
+- timeAssumptions: only assumptions that materially affect time.
+- requiredInputs: only files, recordings, source material, access, links, paths, credentials, or assets still needed.
+- externalCosts: only plausible outside costs. If unknown, name the dependency; never invent a price.
 - systemCommitments: concrete things Project Brain will do and verify.
-- userCommitments: only inputs/decisions the user must provide.
+- userCommitments: only inputs or choices the user still needs to provide.
 - reviewCheckpoints: where Supervisor/Reviewer should validate progress.
-- stopConditions: conditions that should pause/ask the user instead of guessing or forcing progress.
-- risksAndFallbacks: each material risk must have a practical fallback. Example: insufficient voice data -> use a permitted alternative workflow or pause for more source material; unavailable DOCX tooling -> preserve an editable source and report packaging blocker.
+- stopConditions: conditions that should pause and ask rather than guess.
+- risksAndFallbacks: each material execution risk with a practical fallback.
+- workspacePlan: concise description of where work/artifacts should live. If the user did not specify a folder, say Project Brain should create/use its managed workspace.
+- monitoringPlan: default to this Project Brain dashboard with automatic status refresh and iteration/reviewer visibility; mention any project-specific monitoring only if needed.
+- executionBrief: a concise engineering brief (roughly 3-6 short lines) covering target, execution method, main stages, verification, and final handoff.
 
-The contract should be specific enough that the user can approve it knowing the target, prerequisites, expected effort, checks, and fallback paths. Do not expose private chain-of-thought.`;
+The contract must be specific enough that the user can approve target, prerequisites, effort, checks, resources, and fallback paths without reading a long report. Do not expose private chain-of-thought.`;
 }
 
 function recentContext(iterations: IterationRecord[]): string {
@@ -121,6 +137,9 @@ ${memorySnapshot || "No additional project memory yet."}
 WORKSPACE:
 ${project.workspacePath}
 
+PROJECT RESOURCE REFERENCES:
+${(project.definition.resourceReferences || []).length ? (project.definition.resourceReferences || []).map(v => `- ${v}`).join("\n") : "- none"}
+
 ACTIVE HUMAN DIRECTIVES (highest priority after safety and explicit project definition):
 ${directives.length ? directives.map(d => `- ${d.text}`).join("\n") : "- none"}
 
@@ -129,12 +148,13 @@ ${recentContext(iterations)}
 
 Rules:
 - Preserve approved scope, delivery formats, style, and explicit constraints.
-- Follow the executionStrategy and milestones but adapt the next task to actual progress.
-- Use profile guidance. A writing task should advance a document; a research task should advance evidence and synthesis; a planning task should advance a usable plan; a coding task should advance verified software artifacts.
+- Follow the executionStrategy, executionContract and milestones but adapt the next task to actual progress.
+- Inspect resourceReferences before asking the user for a file/link/path that may already be supplied.
+- A writing task should advance a document; a research task should advance evidence and synthesis; a planning task should advance a usable plan; a coding task should advance verified software artifacts.
 - Use project memory to preserve prior decisions, style, research, lessons and continuity.
 - Never lower the acceptance bar just to declare success.
 - Select one coherent task, not a vague multi-day bundle.
-- If a material decision or prerequisite is missing, choose ASK_USER and ask one decisive Persian question before execution.
+- If a truly material operational decision or prerequisite is still missing, choose ASK_USER and ask one decisive Persian question.
 - If the project is genuinely complete against the success criteria, choose COMPLETE.
 - Otherwise choose EXECUTE and provide objective acceptance criteria and verification steps.
 - Do not expose hidden chain-of-thought; provide only a concise reasoningSummary.
@@ -150,6 +170,8 @@ PROJECT: ${project.definition.name}
 PROFILE: ${project.profile}
 DELIVERY FORMATS: ${(project.definition.deliveryFormats || []).join(", ") || "as defined by the task"}
 EXECUTION STRATEGY: ${project.definition.executionStrategy || "follow the approved definition"}
+RESOURCE REFERENCES:
+${(project.definition.resourceReferences || []).length ? (project.definition.resourceReferences || []).map(v => `- ${v}`).join("\n") : "- none"}
 
 PROFILE-SPECIFIC EXECUTION GUIDANCE:
 ${profileGuidance(project.profile)}
@@ -185,6 +207,7 @@ Work on durable project artifacts. Do not assume every project is code:
 - research: create traceable evidence notes and a sourced synthesis without fabricated citations;
 - planning: create a concrete, maintainable plan/roadmap with dependencies, milestones, risks and next actions;
 - general/mixed: choose artifacts that match the approved deliverables.
+Use supplied file/link/path resource references when relevant.
 For requested binary formats such as DOCX or PDF, use available local tooling when practical. If the required tool is unavailable, preserve a high-quality editable source artifact and report the exact packaging blocker instead of pretending the binary file was produced.
 
 Verify your work before finishing. Report what changed, what was verified, and anything still uncertain. Do not claim checks passed unless you actually ran or directly verified them.`;
