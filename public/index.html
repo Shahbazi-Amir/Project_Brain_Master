@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>مغز پروژه</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=0.4.1">
 </head>
 <body>
   <div class="shell">
@@ -49,7 +52,7 @@
           <label for="idea">توضیح ایده</label>
           <span class="field-hint">هر چیزی که الان می‌دانی: هدف، خروجی، مخاطب، ویژگی‌ها یا محدودیت‌ها.</span>
         </div>
-        <button id="ideaVoiceBtn" class="voice-btn" type="button" aria-label="ورودی صوتی ایده">🎙 گفتن ایده · ۲۰ث</button>
+        <button id="ideaVoiceBtn" class="voice-btn" type="button" aria-label="ورودی صوتی ایده">🎙 گفتن ایده · ۱۵ث</button>
       </div>
       <textarea id="idea" rows="6" placeholder="مثال: می‌خواهم متن فارسی تولید کنم، بعد آن را به صوت طبیعی تبدیل کنم و خروجی نهایی قابل استفاده تحویل بگیرم…"></textarea>
       <div id="ideaVoiceStatus" class="voice-status" aria-live="polite"></div>
@@ -82,6 +85,7 @@
     </section>
   </template>
 
-  <script type="module" src="/app.js"></script>
+  <script src="/runtime-fixes.js?v=0.4.1"></script>
+  <script type="module" src="/app.js?v=0.4.1"></script>
 </body>
 </html>

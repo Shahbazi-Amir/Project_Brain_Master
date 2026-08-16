@@ -11,13 +11,14 @@ import type { DirectiveRecord, DiscoveryResult, ExecutorMode, ProjectDefinition,
 
 const publicDir = resolve("public");
 const maxUploadBytes = 200 * 1024 * 1024;
+let activeDiscoveryController: AbortController | null = null;
 
 function json(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(body));
 }
 function text(res: ServerResponse, status: number, body: string, contentType = "text/plain; charset=utf-8"): void {
-  res.writeHead(status, { "content-type": contentType });
+  res.writeHead(status, { "content-type": contentType, "cache-control": "no-store, no-cache, must-revalidate" });
   res.end(body);
 }
 async function bodyJson(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -102,12 +103,31 @@ const server = createServer(async (req, res) => {
       return json(res, 201, { id, name, size: data.length, path: filePath });
     }
 
+    if (method === "POST" && path === "/api/discovery/cancel") {
+      const wasRunning = Boolean(activeDiscoveryController && !activeDiscoveryController.signal.aborted);
+      activeDiscoveryController?.abort();
+      activeDiscoveryController = null;
+      return json(res, 200, { cancelled: wasRunning });
+    }
+
     if (method === "POST" && path === "/api/discover") {
       const body = await bodyJson(req);
       const description = String(body.description ?? "").trim();
       if (description.length < 10) throw new Error("ایده را کمی کامل‌تر توضیح بده");
-      const run = await runArchitect(description, String(body.profileHint ?? ""), Boolean(body.useWebSearch));
-      return json(res, 200, { discovery: run.structured, usage: run.usage });
+
+      activeDiscoveryController?.abort();
+      const controller = new AbortController();
+      activeDiscoveryController = controller;
+      const abortOnDisconnect = () => controller.abort();
+      req.once("aborted", abortOnDisconnect);
+      res.once("close", () => { if (!res.writableEnded) controller.abort(); });
+
+      try {
+        const run = await runArchitect(description, String(body.profileHint ?? ""), Boolean(body.useWebSearch), controller.signal);
+        return json(res, 200, { discovery: run.structured, usage: run.usage });
+      } finally {
+        if (activeDiscoveryController === controller) activeDiscoveryController = null;
+      }
     }
 
     if (method === "POST" && path === "/api/refine") {
