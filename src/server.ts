@@ -5,9 +5,9 @@ import { config } from "./config.ts";
 import { addDirective, getProject, insertProject, listDirectives, listIterations, listProjects, setProjectStatus } from "./db.ts";
 import { loopController } from "./loop.ts";
 import { codexProvider } from "./provider.ts";
-import { runArchitect } from "./roles.ts";
+import { runArchitect, runMaturation } from "./roles.ts";
 import { appendDirectiveToMemory, initializeProjectStorage, resolveWorkspace } from "./storage.ts";
-import type { DirectiveRecord, ExecutorMode, ProjectDefinition, ProjectProfile, ProjectRecord } from "./types.ts";
+import type { DirectiveRecord, DiscoveryResult, ExecutorMode, ProjectDefinition, ProjectProfile, ProjectRecord } from "./types.ts";
 
 const publicDir = resolve("public");
 function json(res: ServerResponse, status: number, body: unknown): void { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(body)); }
@@ -27,15 +27,31 @@ function requireDefinition(value: unknown): ProjectDefinition {
   if (!value || typeof value !== "object") throw new Error("definition is required"); const d = value as ProjectDefinition;
   if (!d.name || !d.primaryGoal || !Array.isArray(d.successCriteria)) throw new Error("definition is incomplete"); return d;
 }
+function requireDiscovery(value: unknown): DiscoveryResult {
+  if (!value || typeof value !== "object") throw new Error("discovery is required");
+  const d = value as DiscoveryResult;
+  if (!d.understanding || !Array.isArray(d.questions) || !d.draftDefinition) throw new Error("discovery is incomplete");
+  return d;
+}
 
 const server = createServer(async (req, res) => {
   try {
     const method = req.method ?? "GET"; const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`); const path = url.pathname;
-    if (method === "GET" && path === "/api/health") return json(res, 200, { ok: true, codex: await codexProvider.health(), node: process.version, dataDir: config.dataDir });
+    if (method === "GET" && path === "/api/health") return json(res, 200, { ok: true, codex: await codexProvider.health(), node: process.version, dataDir: config.dataDir, maxLoopIterations: config.defaultMaxIterations });
     if (method === "GET" && path === "/api/projects") return json(res, 200, { projects: listProjects() });
     if (method === "POST" && path === "/api/discover") {
       const body = await bodyJson(req); const description = String(body.description ?? "").trim(); if (description.length < 10) throw new Error("Describe the project in at least 10 characters");
       const run = await runArchitect(description, String(body.profileHint ?? ""), Boolean(body.useWebSearch)); return json(res, 200, { discovery: run.structured, usage: run.usage });
+    }
+    if (method === "POST" && path === "/api/refine") {
+      const body = await bodyJson(req); const description = String(body.description ?? "").trim(); if (description.length < 10) throw new Error("description is required");
+      const discovery = requireDiscovery(body.discovery); const rawAnswers = body.answers;
+      if (!rawAnswers || typeof rawAnswers !== "object" || Array.isArray(rawAnswers)) throw new Error("answers are required");
+      const answers = Object.fromEntries(Object.entries(rawAnswers as Record<string, unknown>).map(([key, value]) => [key, String(value ?? "").trim()]));
+      const unanswered = discovery.questions.filter(q => !answers[q.id]);
+      if (unanswered.length) throw new Error(`Answer all clarification questions before maturation (${unanswered.length} remaining)`);
+      const run = await runMaturation(description, discovery, answers, String(body.profileHint ?? discovery.suggestedProfile ?? ""), Boolean(body.useWebSearch));
+      return json(res, 200, { maturation: run.structured, usage: run.usage, maxLoopIterations: config.defaultMaxIterations });
     }
     if (method === "POST" && path === "/api/projects") {
       const body = await bodyJson(req); const id = crypto.randomUUID(); const definition = requireDefinition(body.definition); const now = new Date().toISOString();
@@ -44,7 +60,7 @@ const server = createServer(async (req, res) => {
         id, name: definition.name, profile, description: String(body.description ?? ""), status: "READY", definition,
         workspacePath: resolveWorkspace(id, String(body.workspacePath ?? "")), executorMode,
         minQualityScore: Math.min(100, Math.max(1, Number(body.minQualityScore ?? config.defaultMinQuality))),
-        maxIterations: Math.min(100, Math.max(1, Number(body.maxIterations ?? config.defaultMaxIterations))), maxStagnantIterations: Math.min(10, Math.max(1, Number(body.maxStagnantIterations ?? 3))),
+        maxIterations: Math.min(13, Math.max(1, Number(body.maxIterations ?? config.defaultMaxIterations))), maxStagnantIterations: Math.min(10, Math.max(1, Number(body.maxStagnantIterations ?? 3))),
         createdAt: now, updatedAt: now
       };
       insertProject(project); initializeProjectStorage(project); return json(res, 201, projectPayload(id));
@@ -61,7 +77,7 @@ const server = createServer(async (req, res) => {
         addDirective(directive); appendDirectiveToMemory(id, directive); return json(res, 201, directive);
       }
       if (action === "run-once" || action === "run-loop") {
-        const count = action === "run-once" ? 1 : project.maxIterations; void loopController.run(id, count).catch(error => console.error("Project run failed", id, error));
+        const count = action === "run-once" ? 1 : Math.min(13, project.maxIterations); void loopController.run(id, count).catch(error => console.error("Project run failed", id, error));
         return json(res, 202, { started: true, iterations: count });
       }
       if (action === "pause") { const stopped = loopController.stop(id, "PAUSED"); if (!stopped) setProjectStatus(id, "PAUSED"); return json(res, 200, { paused: true }); }
