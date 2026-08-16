@@ -39,6 +39,9 @@ CREATE INDEX IF NOT EXISTS idx_directives_project ON directives(project_id, crea
 CREATE INDEX IF NOT EXISTS idx_events_project ON events(project_id, created_at);
 `);
 
+// Version 0.2 normalizes the automatic loop budget to 13 for existing and new projects.
+db.exec("UPDATE projects SET max_iterations = 13 WHERE max_iterations <> 13;");
+
 function parseProject(row: Record<string, unknown>): ProjectRecord {
   return {
     id: String(row.id), name: String(row.name), profile: row.profile as ProjectRecord["profile"], description: String(row.description), status: row.status as ProjectRecord["status"],
