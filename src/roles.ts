@@ -4,6 +4,7 @@ import { config } from "./config.ts";
 import { architectPrompt, reviewerPrompt, supervisorPrompt } from "./prompts.ts";
 import { codexProvider } from "./provider.ts";
 import { discoverySchema, reviewerSchema, supervisorSchema } from "./schemas.ts";
+import { loadProjectMemory } from "./storage.ts";
 import type { DirectiveRecord, DiscoveryResult, IterationRecord, ProjectRecord, ReviewResult, SupervisorDecision } from "./types.ts";
 
 export async function runArchitect(description: string, profileHint: string, useWebSearch: boolean, signal?: AbortSignal) {
@@ -13,9 +14,11 @@ export async function runArchitect(description: string, profileHint: string, use
 }
 
 export async function runSupervisor(project: ProjectRecord, directives: DirectiveRecord[], iterations: IterationRecord[], signal?: AbortSignal) {
-  return codexProvider.run<SupervisorDecision>({ role: "supervisor", prompt: supervisorPrompt(project, directives, iterations), cwd: project.workspacePath, sandbox: "read-only", schema: supervisorSchema as unknown as Record<string, unknown>, signal });
+  const memory = loadProjectMemory(project.id);
+  return codexProvider.run<SupervisorDecision>({ role: "supervisor", prompt: supervisorPrompt(project, directives, iterations, memory), cwd: project.workspacePath, sandbox: "read-only", schema: supervisorSchema as unknown as Record<string, unknown>, signal });
 }
 
 export async function runReviewer(project: ProjectRecord, decision: SupervisorDecision, executorResult: string, directives: DirectiveRecord[], iterations: IterationRecord[], signal?: AbortSignal) {
-  return codexProvider.run<ReviewResult>({ role: "reviewer", prompt: reviewerPrompt(project, decision, executorResult, directives, iterations), cwd: project.workspacePath, sandbox: "read-only", schema: reviewerSchema as unknown as Record<string, unknown>, signal });
+  const memory = loadProjectMemory(project.id);
+  return codexProvider.run<ReviewResult>({ role: "reviewer", prompt: reviewerPrompt(project, decision, executorResult, directives, iterations, memory), cwd: project.workspacePath, sandbox: "read-only", schema: reviewerSchema as unknown as Record<string, unknown>, signal });
 }
