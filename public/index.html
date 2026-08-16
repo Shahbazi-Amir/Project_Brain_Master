@@ -1,31 +1,79 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>مغز پروژه</title><link rel="stylesheet" href="/styles.css"></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>مغز پروژه</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
 <body>
   <div class="shell">
     <aside>
-      <div class="brand"><div class="dot"></div><div><strong>مغز پروژه</strong><small>سیستم‌عامل محلی پروژه‌ها</small></div></div>
-      <button id="newProjectBtn" class="primary full">+ پروژه جدید</button>
+      <div class="brand">
+        <div class="dot"></div>
+        <div><strong>مغز پروژه</strong><small>اتاق فرمان پروژه‌های شما</small></div>
+      </div>
+      <button id="newProjectBtn" class="primary full">+ ساخت پروژه تازه</button>
       <div id="health" class="health">در حال بررسی Codex…</div>
-      <h4>پروژه‌ها</h4><div id="projectList"></div>
+      <div class="side-title"><span>پروژه‌ها</span><small>حافظه و وضعیت هر پروژه</small></div>
+      <div id="projectList"></div>
     </aside>
+
     <main id="main"></main>
   </div>
+
   <template id="newProjectTemplate">
     <section class="panel hero">
-      <span class="eyebrow">معمار پروژه</span>
-      <h1>ایده خام را به یک پروژه قابل اجرا تبدیل کن.</h1>
-      <p>مغز پروژه قبل از شروع اجرا، هدف، محدوده، معیار کیفیت، مراحل و تصمیم‌های لازم را مشخص می‌کند.</p>
-      <label>می‌خواهی به چه نتیجه‌ای برسی؟</label>
-      <textarea id="idea" rows="7" placeholder="مثال: می‌خواهم یک ابزار محلی بسازم که…"></textarea>
-      <div class="grid2">
-        <div><label>نوع پروژه</label><select id="profileHint"><option value="">تشخیص خودکار</option><option value="writing">نوشتن / کتاب</option><option value="coding">کدنویسی</option><option value="research">پژوهش</option><option value="planning">برنامه‌ریزی</option><option value="general">عمومی</option></select></div>
-        <div><label>مسیر پوشه کاری روی مک (اختیاری)</label><input id="workspacePath" class="ltr" placeholder="/Users/me/project یا خالی بگذار"></div>
+      <div class="architect-banner">
+        <div class="architect-mark">✦</div>
+        <div>
+          <strong>معمار پروژه</strong>
+          <small>ایده را به هدف، محدوده، مسیر اجرا و معیار موفقیت تبدیل می‌کند.</small>
+        </div>
+        <span class="step-badge">مرحله ۱ · شکل‌دهی</span>
       </div>
+
+      <h1>از جرقه‌ی اولیه تا یک نقشه‌ی اجرایی روشن</h1>
+      <p class="hero-copy">لازم نیست از اول همه‌چیز دقیق باشد. ایده‌ات را همان‌طور که در ذهن داری بنویس یا بگو؛ مغز پروژه آن را ساختاربندی می‌کند و فقط تصمیم‌های واقعاً مهم را از تو می‌پرسد.</p>
+
+      <div class="field-head">
+        <div>
+          <label for="idea">هسته‌ی ایده</label>
+          <span class="field-hint">چه چیزی می‌خواهی ساخته، نوشته، بررسی یا حل شود؟</span>
+        </div>
+        <button id="ideaVoiceBtn" class="voice-btn" type="button" aria-label="ورودی صوتی ایده">🎙 بیان صوتی</button>
+      </div>
+      <textarea id="idea" rows="8" placeholder="مثال: می‌خواهم یک ابزار محلی بسازم که پروژه‌های طولانی من را مدیریت کند، تصمیم‌ها را به خاطر بسپارد و کارها را به Codex بدهد…"></textarea>
+      <div id="ideaVoiceStatus" class="voice-status" aria-live="polite"></div>
+
+      <div class="grid2">
+        <div>
+          <label for="profileHint">جنس پروژه</label>
+          <select id="profileHint">
+            <option value="">تشخیص خودکار</option>
+            <option value="writing">نوشتن / کتاب</option>
+            <option value="coding">کدنویسی</option>
+            <option value="research">پژوهش</option>
+            <option value="planning">برنامه‌ریزی</option>
+            <option value="general">عمومی</option>
+          </select>
+        </div>
+        <div>
+          <label for="workspacePath">پوشه کاری روی مک <span class="optional">اختیاری</span></label>
+          <input id="workspacePath" class="ltr" placeholder="/Users/me/project یا خالی بگذار">
+        </div>
+      </div>
+
       <label class="check"><input type="checkbox" id="webSearch"> در مرحله تحلیل، جست‌وجوی وبِ به‌روز مجاز باشد</label>
-      <div class="actions form-actions"><button id="analyzeBtn" class="primary">تحلیل پروژه</button><button id="quickTestBtn" class="secondary" type="button">پر کردن تست سریع</button></div>
+
+      <div class="actions form-actions">
+        <button id="analyzeBtn" class="primary large">ساخت نقشه پروژه</button>
+        <button id="quickTestBtn" class="secondary" type="button">پر کردن تست سریع</button>
+      </div>
       <div id="discovery"></div>
     </section>
   </template>
+
   <script type="module" src="/app.js"></script>
-</body></html>
+</body>
+</html>
