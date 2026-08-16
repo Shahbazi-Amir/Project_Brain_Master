@@ -3,7 +3,7 @@ import type { DirectiveRecord, DiscoveryResult, IterationRecord, ProjectRecord, 
 
 const persianOutputRule = `LANGUAGE RULE:
 - All human-facing natural-language values and summaries must be written in polished, natural Persian (fa-IR).
-- Avoid stiff translations, buzzwords, and coding-centric language unless the project is actually coding.
+- Prefer short, direct Persian labels and sentences. Avoid stiff translations, buzzwords, and coding-centric language unless the project is actually coding.
 - Keep JSON keys, schema enum values, file paths, code, commands, identifiers, and technical tokens exactly in the format required by the schema or task.
 - Do not translate code or machine-readable enum values.`;
 
@@ -18,31 +18,39 @@ ${description}
 OPTIONAL PROFILE HINT:
 ${profileHint || "none"}
 
-First build a faithful picture of the idea, regardless of whether it is software, writing, research, planning, a document, a product concept, or a mixed project.
+Build one faithful picture of the idea first. The picture must work for software, writing, research, planning, media, documents, business/product ideas, or mixed projects.
 
-You must identify:
-- the essence of the idea in plain language;
-- the underlying problem, opportunity, or motivation;
-- what the eventual product/output appears to be;
-- the value proposition and desired impact;
-- 2-4 genuinely different ways to reach the outcome when alternatives exist;
-- assumptions you had to make;
-- only the questions whose answers can materially change the product, scope, audience, format, quality, or execution path.
+FIRST: extract what is already known.
+- Create 3-10 facts in facts[].
+- A fact marked user_explicit must be directly supported by the user's words. Never call an inference a user fact.
+- A fact marked architect_inference is your current interpretation.
+- Each fact must be editable as choices. Put the current interpretation in selectedOptionIds and add only useful alternatives, not filler.
+- If several choices may all apply, use selectionMode=multiple. Otherwise use single.
+- Fact labels should be short Persian concepts such as «نوع خروجی»، «مخاطب»، «بستر اجرا»، «زبان»، «نوع استفاده» or whatever actually fits this idea.
 
-Question policy:
-- Do not ask filler questions.
-- For a non-trivial or ambiguous request, ask 2-6 concise questions.
-- Even for a tiny test, ask at least one confirmation question when the intended artifact or behavior is ambiguous (for example, whether “Hello World” means displaying text, creating a file, or creating a runnable program).
-- Each question must include a short answerHint with examples or an option like «اگر مطمئن نیستی بنویس: پیشنهاد بده».
-- Do not treat unanswered questions as approved decisions.
+SECOND: ask only what is still material.
+- Questions must be adaptive to this specific idea, not a fixed questionnaire.
+- Use 0-12 questions depending on complexity. Tiny clear tasks may need none; ambiguous or high-impact projects may need more.
+- Give 2-6 useful options for each question. Preselect an option only when the user's words or a strong architect recommendation justify it.
+- Use selectionMode=multiple when several answers can coexist.
+- allowDetails=true only when a short custom note could materially improve the answer.
+- Do not ask for long prose by default. The UI will let the user open an optional details box if needed.
+- Questions should cover missing dependencies, target output, audience/use, platform/format, quality bar, constraints, required assets, or other decisions only when relevant.
 
-The draftDefinition is provisional only. It is not permission to execute. Fill it with the best current interpretation, including deliveryFormats and executionStrategy, but preserve uncertainty in humanDecisionsRequired.
+DOMAIN-SENSITIVE CHECKS:
+- If the project involves another person's voice, likeness, copyrighted material, private data, publication, licensing, or third-party assets, surface the relevant permission/rights question before execution.
+- If it is personal use and rights/permission are clearly not material, do not manufacture legal questions.
+- For voice/media work, distinguish own voice, licensed/consented third-party voice, and unverified third-party material when relevant.
+- For writing/research/planning projects, do not force software questions.
+- For software projects, do not assume web/mobile/desktop unless the user said so or it matters.
 
-Estimate workload qualitatively. If current external knowledge would materially improve framing, set researchNeeded=true. Do not expose private chain-of-thought.`;
+Also identify ideaEssence, problemOrOpportunity, intendedProduct, valueProposition, desiredImpact, 2-4 genuinely different approaches when alternatives exist, assumptions, and a provisional draftDefinition.
+
+The draftDefinition is provisional only. It is not permission to execute. Do not silently treat unanswered material questions as approved decisions. Do not expose private chain-of-thought.`;
 }
 
 export function maturationPrompt(description: string, discovery: DiscoveryResult, answers: Record<string, string>, profileHint: string): string {
-  return `You are the Project Architect for the IDEA MATURATION and EXECUTION DESIGN stage. The user has now reviewed the first framing and answered the important questions. Your job is to turn the raw idea into an explicit, mature project definition before any execution begins.
+  return `You are the Project Architect for IDEA MATURATION and EXECUTION DESIGN. The user has reviewed the first picture, corrected extracted facts, and answered the adaptive choices. You now turn that material into a mature project definition and an explicit execution contract. Do not execute the project yet.
 
 ${persianOutputRule}
 
@@ -52,24 +60,43 @@ ${description}
 INITIAL IDEA FRAME:
 ${JSON.stringify(discovery, null, 2)}
 
-USER ANSWERS:
+USER-REVIEWED FACTS AND ANSWERS:
 ${JSON.stringify(answers, null, 2)}
 
 PROFILE HINT:
 ${profileHint || discovery.suggestedProfile || "none"}
 
-Rules:
-- User answers override assumptions from the first frame.
-- If an answer says «پیشنهاد بده» or equivalent, make a sensible recommendation and mark it as a recommendation, not a user fact.
-- Produce a clear clarifiedIdea, productDefinition, valueProposition, and desiredImpact.
-- Explicitly say what changed from the first interpretation and which decisions are now resolved.
-- Choose one recommended approach and explain why it fits this project.
-- Design 2-8 execution stages appropriate to the project. Stages are not Codex iterations: they are meaningful project phases such as research, outline, implementation, editing, validation, packaging, or delivery.
-- Recommend durable delivery formats. Writing may use Markdown/DOCX/PDF when appropriate; research may use a sourced report plus evidence notes; planning may use a plan/roadmap; coding may use repository artifacts and tests. Do not force every project into a code repository mindset.
-- finalDefinition must be ready for approval and execution, with no unresolved material decision silently assumed. Put unresolved material choices in humanDecisionsRequired.
-- executionStrategy should describe how the project should be executed and reviewed, not just list tools.
-- milestones should reflect the execution stages.
-- Do not execute any work yet. Do not expose private chain-of-thought.`;
+Interpretation rules:
+- User-reviewed selections and custom details override earlier assumptions.
+- Keys beginning with fact: are reviewed/corrected facts from the framing screen.
+- Question answers are explicit decisions unless the answer says «پیشنهاد بده» or equivalent.
+- If the user asks you to recommend, make a recommendation and clearly keep it as a recommendation, not a claimed user fact.
+- Correct finalProfile if the clarified project is actually a different kind of project than the initial guess.
+
+Produce a mature definition:
+- clarifiedIdea: one clear paragraph describing what is actually being built/delivered.
+- productDefinition, valueProposition, desiredImpact.
+- whatChanged and resolvedDecisions.
+- one recommended approach with a concise reason.
+- 1-8 meaningful execution stages appropriate to the project. These are project phases, not loop iterations.
+- suitable delivery formats. Do not force code artifacts on writing/research/planning projects.
+- finalDefinition ready for approval. Any still-material unresolved choice must remain in humanDecisionsRequired.
+
+Build executionContract as the user's pre-execution agreement with Project Brain:
+- feasibility: ready only when the known inputs are enough to start; conditional when execution can start but depends on listed inputs/assumptions; blocked when a missing prerequisite prevents responsible execution.
+- feasibilitySummary: plain Persian summary of why.
+- estimatedIterations: realistic estimate from 1 to 13. Thirteen is the ceiling, never a target. Small tasks should estimate fewer iterations.
+- estimatedTime: a useful range for the Project Brain/Codex execution itself, not a fake guarantee. Include uncertainty in timeAssumptions. Do not promise a fixed completion time when external dependencies, user input, web research, long media processing, or unavailable tools can change it.
+- requiredInputs: files, recordings, source material, access, decisions, or other assets that must exist.
+- externalCosts: only costs that are actually plausible from the current plan. If no reliable amount is known, say it is unknown/depends on a named choice. Never invent prices.
+- rightsAndPermissionChecks: only relevant consent/licensing/privacy/publication checks. Keep empty when truly irrelevant.
+- systemCommitments: concrete things Project Brain will do and verify.
+- userCommitments: only inputs/decisions the user must provide.
+- reviewCheckpoints: where Supervisor/Reviewer should validate progress.
+- stopConditions: conditions that should pause/ask the user instead of guessing or forcing progress.
+- risksAndFallbacks: each material risk must have a practical fallback. Example: insufficient voice data -> use a permitted alternative workflow or pause for more source material; unavailable DOCX tooling -> preserve an editable source and report packaging blocker.
+
+The contract should be specific enough that the user can approve it knowing the target, prerequisites, expected effort, checks, and fallback paths. Do not expose private chain-of-thought.`;
 }
 
 function recentContext(iterations: IterationRecord[]): string {
@@ -107,7 +134,7 @@ Rules:
 - Use project memory to preserve prior decisions, style, research, lessons and continuity.
 - Never lower the acceptance bar just to declare success.
 - Select one coherent task, not a vague multi-day bundle.
-- If a material decision is missing, choose ASK_USER and ask one decisive Persian question before execution.
+- If a material decision or prerequisite is missing, choose ASK_USER and ask one decisive Persian question before execution.
 - If the project is genuinely complete against the success criteria, choose COMPLETE.
 - Otherwise choose EXECUTE and provide objective acceptance criteria and verification steps.
 - Do not expose hidden chain-of-thought; provide only a concise reasoningSummary.
