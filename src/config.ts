@@ -12,7 +12,7 @@ export const config = {
   port: intEnv("PROJECT_BRAIN_PORT", 3000),
   dataDir: resolve(process.env.PROJECT_BRAIN_DATA_DIR ?? ".project-brain"),
   codexCommand: process.env.PROJECT_BRAIN_CODEX_COMMAND ?? "codex",
-  defaultMaxIterations: intEnv("PROJECT_BRAIN_DEFAULT_MAX_ITERATIONS", 8),
+  defaultMaxIterations: Math.min(13, Math.max(1, intEnv("PROJECT_BRAIN_DEFAULT_MAX_ITERATIONS", 13))),
   defaultMinQuality: intEnv("PROJECT_BRAIN_DEFAULT_MIN_QUALITY", 90),
   codexTimeoutMs: intEnv("PROJECT_BRAIN_CODEX_TIMEOUT_MS", 30 * 60 * 1000)
 };
