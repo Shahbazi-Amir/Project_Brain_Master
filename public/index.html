@@ -7,21 +7,18 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>مغز پروژه</title>
-  <link rel="stylesheet" href="/styles.css?v=0.4.1">
+  <link rel="stylesheet" href="/styles.css?v=0.5.0">
+  <link rel="stylesheet" href="/ui-v2.css?v=0.5.0">
 </head>
 <body>
   <div class="shell">
     <aside>
-      <div class="brand">
-        <div class="dot"></div>
-        <div><strong>مغز پروژه</strong><small>اتاق فرمان پروژه‌های شما</small></div>
-      </div>
+      <div class="brand"><div class="dot"></div><div><strong>مغز پروژه</strong><small>اتاق فرمان پروژه‌های شما</small></div></div>
       <button id="newProjectBtn" class="primary full">+ ایده / پروژه تازه</button>
       <div id="health" class="health">در حال بررسی Codex…</div>
       <div class="side-title"><span>پروژه‌ها</span><small>حافظه و وضعیت</small></div>
       <div id="projectList"></div>
     </aside>
-
     <main id="main"></main>
   </div>
 
@@ -29,63 +26,36 @@
     <section class="panel hero">
       <div class="architect-banner">
         <div class="architect-mark">✦</div>
-        <div>
-          <strong>کارگاه شکل‌گیری پروژه</strong>
-          <small>برداشت ایده → روشن‌سازی → قرارداد اجرا</small>
-        </div>
+        <div><strong>شکل دادن ایده</strong><small>برداشت → روشن‌سازی → اجرا</small></div>
         <span class="step-badge">مرحله ۱ از ۳</span>
       </div>
 
-      <div class="journey" aria-label="مراحل شکل‌گیری پروژه">
-        <div class="journey-step active"><b>۱</b><span>برداشت ایده</span></div>
-        <div class="journey-line"></div>
-        <div class="journey-step"><b>۲</b><span>روشن‌سازی</span></div>
-        <div class="journey-line"></div>
-        <div class="journey-step"><b>۳</b><span>قرارداد اجرا</span></div>
-      </div>
-
       <h1>ایده چیه؟</h1>
-      <p class="hero-copy">ایده را یک‌جا بنویس یا بگو. اول فقط برداشت فعلی را می‌بینی؛ بعد با چند انتخاب کوتاه دقیقش می‌کنیم.</p>
+      <p class="hero-copy">ایده را یک‌جا بنویس یا بگو. اول فقط برداشت من را چک می‌کنی؛ بعد نقشه اجرا ساخته می‌شود.</p>
 
       <div class="field-head">
-        <div>
-          <label for="idea">توضیح ایده</label>
-          <span class="field-hint">هر چیزی که الان می‌دانی: هدف، خروجی، مخاطب، ویژگی‌ها یا محدودیت‌ها.</span>
-        </div>
-        <button id="ideaVoiceBtn" class="voice-btn" type="button" aria-label="ورودی صوتی ایده">🎙 گفتن ایده · ۱۵ث</button>
+        <div><label for="idea">توضیح ایده</label><span class="field-hint">هر چیزی که الان می‌دانی؛ لازم نیست رسمی باشد.</span></div>
+        <button id="ideaVoiceBtn" class="voice-btn" type="button">🎙 گفتن ایده · ۱۵ث</button>
       </div>
-      <textarea id="idea" rows="6" placeholder="مثال: می‌خواهم متن فارسی تولید کنم، بعد آن را به صوت طبیعی تبدیل کنم و خروجی نهایی قابل استفاده تحویل بگیرم…"></textarea>
+      <textarea id="idea" rows="6" placeholder="ایده را اینجا بنویس یا با صدا بگو…"></textarea>
       <div id="ideaVoiceStatus" class="voice-status" aria-live="polite"></div>
 
       <div class="grid2">
-        <div>
-          <label for="profileHint">نوع پروژه <span class="optional">اختیاری</span></label>
-          <select id="profileHint">
-            <option value="">تشخیص خودکار</option>
-            <option value="writing">نوشتن / کتاب / محتوا</option>
-            <option value="coding">نرم‌افزار / کدنویسی</option>
-            <option value="research">پژوهش / تحلیل</option>
-            <option value="planning">برنامه‌ریزی / طراحی مسیر</option>
-            <option value="general">عمومی / ترکیبی</option>
-          </select>
-        </div>
-        <div>
-          <label for="workspacePath">پوشه کاری روی مک <span class="optional">اختیاری</span></label>
-          <input id="workspacePath" class="ltr" placeholder="/Users/me/project یا خالی بگذار">
-        </div>
+        <div><label for="profileHint">نوع پروژه <span class="optional">اختیاری</span></label><select id="profileHint"><option value="">تشخیص خودکار</option><option value="writing">نوشتن / محتوا</option><option value="coding">نرم‌افزار / کدنویسی</option><option value="research">پژوهش / تحلیل</option><option value="planning">برنامه‌ریزی</option><option value="general">عمومی / ترکیبی</option></select></div>
+        <div><label for="workspacePath">پوشه کاری <span class="optional">اختیاری</span></label><input id="workspacePath" class="ltr" placeholder="/Users/me/project یا خالی"></div>
       </div>
 
-      <label class="check"><input type="checkbox" id="webSearch"> اگر برای فهم ایده لازم شد، جست‌وجوی وب مجاز باشد</label>
+      <label class="check"><input type="checkbox" id="webSearch"> اگر لازم شد، جست‌وجوی وب مجاز باشد</label>
 
       <div class="actions form-actions">
         <button id="quickTestBtn" class="secondary" type="button">قرار دادن نمونه</button>
-        <button id="analyzeBtn" class="primary large">تصویر ایده</button>
+        <button id="analyzeBtn" class="primary large" type="button">تصویر ایده</button>
+        <button id="cancelDiscoveryBtn" class="danger" type="button" hidden>لغو ساخت تصویر</button>
       </div>
       <div id="discovery"></div>
     </section>
   </template>
 
-  <script src="/runtime-fixes.js?v=0.4.1"></script>
-  <script type="module" src="/app.js?v=0.4.1"></script>
+  <script type="module" src="/app.js?v=0.5.0"></script>
 </body>
 </html>
