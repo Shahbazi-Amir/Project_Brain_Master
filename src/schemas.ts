@@ -9,7 +9,7 @@ const definitionProperties = {
   estimatedComplexity: { type: "string", enum: ["low", "medium", "high", "very_high"] }, estimatedWorkload: { type: "string" },
   humanDecisionsRequired: stringArray,
   coreIdea: { type: "string" }, problemOrOpportunity: { type: "string" }, valueProposition: { type: "string" }, desiredImpact: { type: "string" },
-  deliveryFormats: stringArray, executionStrategy: { type: "string" }
+  deliveryFormats: stringArray, executionStrategy: { type: "string" }, resourceReferences: stringArray
 } as const;
 
 const definitionSchema = {
@@ -76,11 +76,11 @@ const executionContractSchema = {
   properties: {
     feasibility: { type: "string", enum: ["ready", "conditional", "blocked"] }, feasibilitySummary: { type: "string" },
     estimatedIterations: { type: "integer", minimum: 1, maximum: 13 }, estimatedTime: { type: "string" }, timeAssumptions: stringArray,
-    requiredInputs: stringArray, externalCosts: stringArray, rightsAndPermissionChecks: stringArray,
-    systemCommitments: stringArray, userCommitments: stringArray, reviewCheckpoints: stringArray, stopConditions: stringArray,
-    risksAndFallbacks: { type: "array", items: riskFallbackSchema }
+    requiredInputs: stringArray, externalCosts: stringArray, systemCommitments: stringArray, userCommitments: stringArray,
+    reviewCheckpoints: stringArray, stopConditions: stringArray, risksAndFallbacks: { type: "array", items: riskFallbackSchema },
+    workspacePlan: { type: "string" }, monitoringPlan: { type: "string" }, executionBrief: { type: "string" }
   },
-  required: ["feasibility", "feasibilitySummary", "estimatedIterations", "estimatedTime", "timeAssumptions", "requiredInputs", "externalCosts", "rightsAndPermissionChecks", "systemCommitments", "userCommitments", "reviewCheckpoints", "stopConditions", "risksAndFallbacks"],
+  required: ["feasibility", "feasibilitySummary", "estimatedIterations", "estimatedTime", "timeAssumptions", "requiredInputs", "externalCosts", "systemCommitments", "userCommitments", "reviewCheckpoints", "stopConditions", "risksAndFallbacks", "workspacePlan", "monitoringPlan", "executionBrief"],
   additionalProperties: false
 } as const;
 

@@ -34,6 +34,7 @@ export interface ProjectDefinition {
   deliveryFormats?: string[];
   executionStrategy?: string;
   executionContract?: ExecutionContract;
+  resourceReferences?: string[];
 }
 
 export interface ChoiceOption { id: string; label: string; note: string; }
@@ -96,12 +97,14 @@ export interface ExecutionContract {
   timeAssumptions: string[];
   requiredInputs: string[];
   externalCosts: string[];
-  rightsAndPermissionChecks: string[];
   systemCommitments: string[];
   userCommitments: string[];
   reviewCheckpoints: string[];
   stopConditions: string[];
   risksAndFallbacks: RiskFallback[];
+  workspacePlan: string;
+  monitoringPlan: string;
+  executionBrief: string;
 }
 export interface MaturationResult {
   finalProfile: ProjectProfile;

@@ -28,13 +28,13 @@
         <div class="architect-mark">✦</div>
         <div>
           <strong>کارگاه شکل‌گیری پروژه</strong>
-          <small>تصویر ایده → روشن‌سازی → قرارداد اجرا</small>
+          <small>برداشت ایده → روشن‌سازی → قرارداد اجرا</small>
         </div>
         <span class="step-badge">مرحله ۱ از ۳</span>
       </div>
 
       <div class="journey" aria-label="مراحل شکل‌گیری پروژه">
-        <div class="journey-step active"><b>۱</b><span>تصویر ایده</span></div>
+        <div class="journey-step active"><b>۱</b><span>برداشت ایده</span></div>
         <div class="journey-line"></div>
         <div class="journey-step"><b>۲</b><span>روشن‌سازی</span></div>
         <div class="journey-line"></div>
@@ -42,16 +42,16 @@
       </div>
 
       <h1>ایده چیه؟</h1>
-      <p class="hero-copy">هرچه در ذهن داری یک‌جا بگو. اول برداشت من را می‌بینی، بعد فقط جاهای مهم را با چند گزینه اصلاح می‌کنی.</p>
+      <p class="hero-copy">ایده را یک‌جا بنویس یا بگو. اول فقط برداشت فعلی را می‌بینی؛ بعد با چند انتخاب کوتاه دقیقش می‌کنیم.</p>
 
       <div class="field-head">
         <div>
           <label for="idea">توضیح ایده</label>
-          <span class="field-hint">هدف، خروجی، مخاطب، محدودیت یا هر چیزی که الان می‌دانی.</span>
+          <span class="field-hint">هر چیزی که الان می‌دانی: هدف، خروجی، مخاطب، ویژگی‌ها یا محدودیت‌ها.</span>
         </div>
-        <button id="ideaVoiceBtn" class="voice-btn" type="button" aria-label="ورودی صوتی ایده">🎙 گفتن ایده · ۳۰ث</button>
+        <button id="ideaVoiceBtn" class="voice-btn" type="button" aria-label="ورودی صوتی ایده">🎙 گفتن ایده · ۲۰ث</button>
       </div>
-      <textarea id="idea" rows="8" placeholder="مثال: می‌خواهم متنی تولید کنم که بعداً به صوت تبدیل شود؛ مخاطب فارسی‌زبان است و خروجی نهایی برای انتشار عمومی خواهد بود…"></textarea>
+      <textarea id="idea" rows="6" placeholder="مثال: می‌خواهم متن فارسی تولید کنم، بعد آن را به صوت طبیعی تبدیل کنم و خروجی نهایی قابل استفاده تحویل بگیرم…"></textarea>
       <div id="ideaVoiceStatus" class="voice-status" aria-live="polite"></div>
 
       <div class="grid2">
@@ -75,8 +75,8 @@
       <label class="check"><input type="checkbox" id="webSearch"> اگر برای فهم ایده لازم شد، جست‌وجوی وب مجاز باشد</label>
 
       <div class="actions form-actions">
+        <button id="quickTestBtn" class="secondary" type="button">قرار دادن نمونه</button>
         <button id="analyzeBtn" class="primary large">تصویر ایده</button>
-        <button id="quickTestBtn" class="secondary" type="button">نمونه ساده</button>
       </div>
       <div id="discovery"></div>
     </section>
