@@ -38,13 +38,14 @@ export const discoverySchema = {
 export const maturationSchema = {
   type: "object",
   properties: {
+    finalProfile: { type: "string", enum: ["coding", "writing", "research", "planning", "general"] },
     clarifiedIdea: { type: "string" }, productDefinition: { type: "string" }, valueProposition: { type: "string" }, desiredImpact: { type: "string" },
     whatChanged: stringArray, resolvedDecisions: stringArray, remainingAssumptions: stringArray,
     recommendedApproach: { type: "object", properties: { name: { type: "string" }, why: { type: "string" } }, required: ["name", "why"], additionalProperties: false },
     executionStages: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", properties: { title: { type: "string" }, purpose: { type: "string" }, outputs: stringArray, doneWhen: { type: "string" } }, required: ["title", "purpose", "outputs", "doneWhen"], additionalProperties: false } },
     recommendedDeliveryFormats: stringArray, executionRisks: stringArray, finalDefinition: definitionSchema
   },
-  required: ["clarifiedIdea", "productDefinition", "valueProposition", "desiredImpact", "whatChanged", "resolvedDecisions", "remainingAssumptions", "recommendedApproach", "executionStages", "recommendedDeliveryFormats", "executionRisks", "finalDefinition"],
+  required: ["finalProfile", "clarifiedIdea", "productDefinition", "valueProposition", "desiredImpact", "whatChanged", "resolvedDecisions", "remainingAssumptions", "recommendedApproach", "executionStages", "recommendedDeliveryFormats", "executionRisks", "finalDefinition"],
   additionalProperties: false
 } as const;
 
