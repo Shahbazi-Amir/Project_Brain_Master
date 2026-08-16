@@ -1,10 +1,10 @@
-import { appendFileSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { config } from "./config.ts";
 import type { DirectiveRecord, ProjectDefinition, ProjectRecord } from "./types.ts";
 
 export function projectDir(projectId: string): string { return join(config.dataDir, "projects", projectId); }
-export function internalWorkspace(projectId: string): string { return join(projectDir(projectId), "workspace"); }
+export function internalWorkspace(projectId: string): string { return projectDir(projectId); }
 
 export function resolveWorkspace(projectId: string, requested?: string): string {
   if (!requested?.trim()) { const path = internalWorkspace(projectId); mkdirSync(path, { recursive: true }); return path; }
@@ -21,7 +21,7 @@ export function definitionMarkdown(def: ProjectDefinition): string {
 }
 
 export function initializeProjectStorage(project: ProjectRecord): void {
-  const dir = projectDir(project.id); mkdirSync(dir, { recursive: true }); mkdirSync(internalWorkspace(project.id), { recursive: true });
+  const dir = projectDir(project.id); mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "project.md"), definitionMarkdown(project.definition), "utf8");
   writeIfMissing(join(dir, "goals.md"), `# Goals\n\n## Primary\n${project.definition.primaryGoal}\n\n## Secondary\n${bullets(project.definition.secondaryGoals)}\n`);
   writeIfMissing(join(dir, "rules.md"), `# Rules\n\n${bullets(project.definition.constraints)}\n`);
@@ -32,6 +32,16 @@ export function initializeProjectStorage(project: ProjectRecord): void {
   writeIfMissing(join(dir, "directives.md"), "# Human Directives\n\n");
   writeIfMissing(join(dir, "lessons.md"), "# Lessons\n\n");
   writeState(project, "Project created and ready for execution.");
+}
+
+const memoryFiles = ["project.md", "goals.md", "rules.md", "style.md", "scope.md", "decisions.md", "state.md", "research.md", "directives.md", "lessons.md"];
+export function loadProjectMemory(projectId: string): string {
+  const dir = projectDir(projectId);
+  return memoryFiles.flatMap(file => {
+    const path = join(dir, file); if (!existsSync(path)) return [];
+    const content = readFileSync(path, "utf8").slice(0, 6000);
+    return [`--- ${file} ---\n${content}`];
+  }).join("\n\n").slice(0, 40_000);
 }
 
 export function appendDirectiveToMemory(projectId: string, directive: DirectiveRecord): void { appendFileSync(join(projectDir(projectId), "directives.md"), `- ${directive.createdAt}: ${directive.text}\n`, "utf8"); }
