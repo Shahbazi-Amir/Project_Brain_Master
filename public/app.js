@@ -156,7 +156,7 @@ function renderMaturation(m){
   el.innerHTML=`<div class="panel nested maturation-panel">
     <div class="architect-banner success-banner"><div class="architect-mark">✓</div><div><strong>ایده پخته شد</strong><small>حالا می‌توانی قبل از ساخت پروژه، تعریف نهایی و مسیر اجرا را ببینی و اصلاح کنی.</small></div><span class="step-badge">مرحله ۳ از ۳</span></div>
 
-    <div class="mature-idea"><span class="eyebrow">نسخه پخته‌شده ایده</span><h2>${esc(def.name||d.suggestedProjectType)}</h2><p class="lead strong-lead">${esc(m.clarifiedIdea)}</p></div>
+    <div class="mature-idea"><span class="eyebrow">نسخه پخته‌شده ایده · ${esc(fa(profileFa,m.finalProfile||d.suggestedProfile))}</span><h2>${esc(def.name||d.suggestedProjectType)}</h2><p class="lead strong-lead">${esc(m.clarifiedIdea)}</p></div>
 
     <div class="idea-picture-grid">
       <div class="mini emphasis"><span class="card-label">محصول / خروجی نهایی</span><p>${esc(m.productDefinition)}</p></div>
@@ -203,12 +203,16 @@ async function createApprovedProject(){
   const btn=$('#createProjectBtn');setBusy(btn,true,'در حال ساخت پروژه…');
   try{
     const definition=JSON.parse($('#definitionJson').value);
-    const created=await api('/api/projects',{method:'POST',body:JSON.stringify({description:draftFlow.description,definition,profile:draftFlow.discovery.suggestedProfile,workspacePath:$('#workspacePath').value,executorMode:$('#executorMode').value,minQualityScore:Number($('#quality').value),maxIterations:13})});
+    const finalProfile=draftFlow.maturation?.finalProfile||draftFlow.discovery.suggestedProfile;
+    const created=await api('/api/projects',{method:'POST',body:JSON.stringify({description:draftFlow.description,definition,profile:finalProfile,workspacePath:$('#workspacePath').value,executorMode:$('#executorMode').value,minQualityScore:Number($('#quality').value),maxIterations:13})});
     await refreshProjects();openProject(created.project.id);
   }catch(e){show('#createError','error',`ساخت پروژه انجام نشد: ${e.message}`);}finally{setBusy(btn,false);}
 }
 
-async function openProject(id){currentId=id;draftFlow=null;renderList();clearInterval(poll);await renderProject();poll=setInterval(renderProject,3000);}
+async function openProject(id){
+  currentId=id;draftFlow=null;renderList();clearInterval(poll);await renderProject();
+  poll=setInterval(()=>{const active=document.activeElement;if(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName))return;renderProject();},3000);
+}
 async function renderProject(){
   if(!currentId)return;
   try{
