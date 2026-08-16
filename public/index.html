@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Project Brain</title><link rel="stylesheet" href="/styles.css"></head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand"><div class="dot"></div><div><strong>Project Brain</strong><small>Local project OS</small></div></div>
+      <button id="newProjectBtn" class="primary full">+ New Project</button>
+      <div id="health" class="health">Checking Codex…</div>
+      <h4>Projects</h4><div id="projectList"></div>
+    </aside>
+    <main id="main"></main>
+  </div>
+  <template id="newProjectTemplate">
+    <section class="panel hero">
+      <span class="eyebrow">PROJECT ARCHITECT</span>
+      <h1>Turn a rough idea into an executable project.</h1>
+      <p>Project Brain defines the goal, scope, quality bar, milestones and missing decisions before an Executor starts work.</p>
+      <label>What do you want to achieve?</label>
+      <textarea id="idea" rows="7" placeholder="Example: I want to write a professional book about…"></textarea>
+      <div class="grid2">
+        <div><label>Profile hint</label><select id="profileHint"><option value="">Auto detect</option><option>writing</option><option>coding</option><option>research</option><option>planning</option><option>general</option></select></div>
+        <div><label>Local workspace path (optional)</label><input id="workspacePath" placeholder="/Users/me/project or leave blank"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="webSearch"> Allow current web research during discovery</label>
+      <button id="analyzeBtn" class="primary">Analyze Project</button>
+      <div id="discovery"></div>
+    </section>
+  </template>
+  <script type="module" src="/app.js"></script>
+</body></html>
