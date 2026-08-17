@@ -1,29 +1,27 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "repository": "Shahbazi-Amir/Project_Brain_Master",
-  "local_dashboard": {
-    "issue_number": 10,
-    "url": "https://github.com/Shahbazi-Amir/Project_Brain_Master/issues/10",
-    "monitor_workflow_path": ".github/workflows/actions-storage-monitor.yml",
-    "monitor_script_path": ".github/scripts/actions_storage_local_monitor.py"
+  "control_center": {
+    "mode": "local_gh_authenticated",
+    "url": "http://127.0.0.1:3010",
+    "server_path": "tools/github-control-center/server.mjs",
+    "start_command": "npm run github:ops",
+    "all_services_command": "npm start",
+    "refresh_seconds": 300,
+    "monitoring_consumes_actions_minutes": false
   },
   "cleanup": {
+    "local_mode": "preview_then_explicit_confirmation",
+    "skip_active_or_queued_repositories": true,
+    "delete_workflow_runs": false,
+    "delete_logs": false,
     "workflow_path": ".github/workflows/actions-artifact-retention.yml",
-    "script_path": ".github/scripts/actions_artifact_retention.py",
-    "scheduled_policy": "conservative_provenance_required"
-  },
-  "central_dashboard": {
-    "host_repository": "Shahbazi-Amir/Project_Brain_Master",
-    "issue_number": 11,
-    "url": "https://github.com/Shahbazi-Amir/Project_Brain_Master/issues/11",
-    "workflow_path": ".github/workflows/actions-storage-central-dashboard.yml",
-    "script_path": ".github/scripts/actions_storage_central_dashboard.py",
-    "repository_discovery": "dynamic_api",
-    "optional_cross_repository_secret": "CENTRAL_DASHBOARD_TOKEN"
+    "workflow_mode": "manual_only"
   },
   "quota": {
-    "repository_metric": "REPOSITORY_LIVE_ARTIFACT_STORAGE",
-    "account_metric": "ACCOUNT_QUOTA_STATUS",
-    "account_capacity": "UNKNOWN_ACCOUNT_CAPACITY"
+    "artifact_metric": "CURRENT_LIVE_ARTIFACT_BYTES",
+    "cache_metric": "CURRENT_CACHE_BYTES_PER_REPOSITORY",
+    "billing_metric": "ACCOUNT_ACTIONS_BILLING_USAGE_IF_AUTHORIZED",
+    "do_not_guess_unknown_capacity": true
   }
 }

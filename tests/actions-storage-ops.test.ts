@@ -1,62 +1,51 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const cleanupWorkflow = readFileSync(".github/workflows/actions-artifact-retention.yml", "utf8");
 const cleanupScript = readFileSync(".github/scripts/actions_artifact_retention.py", "utf8");
-const monitorWorkflow = readFileSync(".github/workflows/actions-storage-monitor.yml", "utf8");
-const monitorScript = readFileSync(".github/scripts/actions_storage_local_monitor.py", "utf8");
-const centralWorkflow = readFileSync(".github/workflows/actions-storage-central-dashboard.yml", "utf8");
-const centralScript = readFileSync(".github/scripts/actions_storage_central_dashboard.py", "utf8");
-const metadata = JSON.parse(readFileSync(".github/actions-storage-monitoring.json", "utf8"));
+const controlCenter = readFileSync("tools/github-control-center/server.mjs", "utf8");
+const startAll = readFileSync("tools/start-all.mjs", "utf8");
+const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 
-test("cleanup workflow is scheduled, dispatchable, serialized and minimally permissioned", () => {
+test("repository cleanup workflow is manual-only", () => {
   assert.match(cleanupWorkflow, /workflow_dispatch:/);
-  assert.match(cleanupWorkflow, /schedule:/);
+  assert.doesNotMatch(cleanupWorkflow, /schedule:/);
+  assert.doesNotMatch(cleanupWorkflow, /\npush:/);
   assert.match(cleanupWorkflow, /actions: write/);
-  assert.match(cleanupWorkflow, /issues: write/);
-  assert.match(cleanupWorkflow, /contents: read/);
-  assert.match(cleanupWorkflow, /concurrency:/);
   assert.match(cleanupWorkflow, /cancel-in-progress: false/);
 });
 
+test("legacy Actions-powered live dashboards are disabled", () => {
+  assert.equal(existsSync(".github/workflows/actions-storage-monitor.yml"), false);
+  assert.equal(existsSync(".github/workflows/actions-storage-central-dashboard.yml"), false);
+});
+
 test("cleanup policy preserves ambiguous and important provenance by default", () => {
-  assert.match(cleanupScript, /return "unknown"/);
   assert.match(cleanupScript, /unknown-family-preserved-by-default/);
   assert.match(cleanupScript, /active-or-queued-run/);
   assert.match(cleanupScript, /only-surviving-family-copy/);
   assert.match(cleanupScript, /latest-valid-successful-family-copy/);
   assert.match(cleanupScript, /protected-release-or-evidence-family/);
-});
-
-test("cleanup deletes artifacts only and never prunes workflow run history", () => {
-  assert.match(cleanupScript, /actions\/artifacts\/\{artifact\['id'\]\}/);
   assert.doesNotMatch(cleanupScript, /request\("DELETE",\s*f"\/repos\/\{REPO\}\/actions\/runs/);
 });
 
-test("local monitor refreshes storage and activity without destructive permissions", () => {
-  assert.match(monitorWorkflow, /workflow_run:/);
-  assert.match(monitorWorkflow, /schedule:/);
-  assert.match(monitorWorkflow, /actions: read/);
-  assert.match(monitorWorkflow, /issues: write/);
-  assert.doesNotMatch(monitorWorkflow, /actions: write/);
-  assert.doesNotMatch(monitorScript, /request\("DELETE"/);
-  assert.match(monitorScript, /CURRENT_RUN_ID/);
-  assert.match(monitorScript, /completed steps \/ total steps/);
+test("local control center covers account inventory, alerts and safe cleanup", () => {
+  assert.match(controlCenter, /\/user\/repos\?affiliation=owner/);
+  assert.match(controlCenter, /actions\/artifacts/);
+  assert.match(controlCenter, /actions\/caches/);
+  assert.match(controlCenter, /actions\/runs/);
+  assert.match(controlCenter, /settings\/billing\/usage/);
+  assert.match(controlCenter, /Repo اکنون اجرای فعال\/صف‌شده دارد/);
+  assert.match(controlCenter, /CLEANUP_PREVIEW_TTL_MS/);
+  assert.match(controlCenter, /پاکسازی موارد امن/);
+  assert.doesNotMatch(controlCenter, /actions\/runs\/\$\{item\.id\}/);
 });
 
-test("central dashboard discovers repositories dynamically and supports scoped cross-repo auth", () => {
-  assert.match(centralWorkflow, /CENTRAL_DASHBOARD_TOKEN/);
-  assert.match(centralScript, /\/user\/repos\?affiliation=/);
-  assert.match(centralScript, /PUBLIC_OWNER_REPOSITORIES_ONLY/);
-  assert.doesNotMatch(centralScript, /Book_Production|IRMA|Self-Structuring-Object-Cognition|vid_pipeline|Political|devfix_for_macintel/);
-});
-
-test("integration metadata keeps repository and account quota concepts separate", () => {
-  assert.equal(metadata.quota.repository_metric, "REPOSITORY_LIVE_ARTIFACT_STORAGE");
-  assert.equal(metadata.quota.account_metric, "ACCOUNT_QUOTA_STATUS");
-  assert.equal(metadata.quota.account_capacity, "UNKNOWN_ACCOUNT_CAPACITY");
-  assert.equal(metadata.local_dashboard.issue_number, 10);
-  assert.equal(metadata.local_dashboard.monitor_workflow_path, ".github/workflows/actions-storage-monitor.yml");
-  assert.equal(metadata.central_dashboard.issue_number, 11);
+test("npm start launches Project Brain and GitHub Control Center together", () => {
+  assert.equal(pkg.version, "0.6.0");
+  assert.equal(pkg.scripts.start, "node tools/start-all.mjs");
+  assert.equal(pkg.scripts["github:ops"], "node tools/github-control-center/server.mjs");
+  assert.match(startAll, /src\/server\.ts/);
+  assert.match(startAll, /github-control-center\/server\.mjs/);
 });
