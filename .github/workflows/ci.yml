@@ -25,6 +25,7 @@ jobs:
         run: |
           python3 -m py_compile \
             .github/scripts/actions_artifact_retention.py \
+            .github/scripts/actions_storage_local_monitor.py \
             .github/scripts/actions_storage_central_dashboard.py
 
       - name: Setup Node ${{ matrix.node-version }}
