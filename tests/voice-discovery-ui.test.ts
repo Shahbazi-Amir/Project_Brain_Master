@@ -21,6 +21,6 @@ test("idea framing can be cancelled and locks voice while running", () => {
 
 test("static UI responses disable browser caching and use one UI implementation", () => {
   assert.doesNotMatch(index, /runtime-fixes/);
-  assert.match(index, /app\.js\?v=0\.6\.0/);
+  assert.match(index, /app\.js\?v=0\.6\.1/);
   assert.match(server, /no-store, no-cache, must-revalidate/);
 });
