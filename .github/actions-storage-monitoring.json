@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "repository": "Shahbazi-Amir/Project_Brain_Master",
+  "local_dashboard": {
+    "issue_number": 10,
+    "url": "https://github.com/Shahbazi-Amir/Project_Brain_Master/issues/10"
+  },
+  "cleanup": {
+    "workflow_path": ".github/workflows/actions-artifact-retention.yml",
+    "script_path": ".github/scripts/actions_artifact_retention.py",
+    "scheduled_policy": "conservative_provenance_required"
+  },
+  "central_dashboard": {
+    "host_repository": "Shahbazi-Amir/Project_Brain_Master",
+    "issue_number": 11,
+    "url": "https://github.com/Shahbazi-Amir/Project_Brain_Master/issues/11",
+    "workflow_path": ".github/workflows/actions-storage-central-dashboard.yml",
+    "script_path": ".github/scripts/actions_storage_central_dashboard.py",
+    "repository_discovery": "dynamic_api",
+    "optional_cross_repository_secret": "CENTRAL_DASHBOARD_TOKEN"
+  },
+  "quota": {
+    "repository_metric": "REPOSITORY_LIVE_ARTIFACT_STORAGE",
+    "account_metric": "ACCOUNT_QUOTA_STATUS",
+    "account_capacity": "UNKNOWN_ACCOUNT_CAPACITY"
+  }
+}
