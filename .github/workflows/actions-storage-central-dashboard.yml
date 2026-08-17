@@ -1,0 +1,30 @@
+name: Central Actions Storage Dashboard
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7 4 * * *"
+
+permissions:
+  actions: read
+  issues: write
+  contents: read
+
+concurrency:
+  group: central-actions-storage-dashboard-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  update-central-dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Aggregate accessible repositories
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CENTRAL_DASHBOARD_TOKEN: ${{ secrets.CENTRAL_DASHBOARD_TOKEN }}
+          CENTRAL_DASHBOARD_ISSUE_NUMBER: "11"
+        run: python3 .github/scripts/actions_storage_central_dashboard.py
