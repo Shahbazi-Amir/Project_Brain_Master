@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 
 const cleanupWorkflow = readFileSync(".github/workflows/actions-artifact-retention.yml", "utf8");
 const cleanupScript = readFileSync(".github/scripts/actions_artifact_retention.py", "utf8");
+const monitorWorkflow = readFileSync(".github/workflows/actions-storage-monitor.yml", "utf8");
+const monitorScript = readFileSync(".github/scripts/actions_storage_local_monitor.py", "utf8");
 const centralWorkflow = readFileSync(".github/workflows/actions-storage-central-dashboard.yml", "utf8");
 const centralScript = readFileSync(".github/scripts/actions_storage_central_dashboard.py", "utf8");
 const metadata = JSON.parse(readFileSync(".github/actions-storage-monitoring.json", "utf8"));
@@ -32,6 +34,17 @@ test("cleanup deletes artifacts only and never prunes workflow run history", () 
   assert.doesNotMatch(cleanupScript, /request\("DELETE",\s*f"\/repos\/\{REPO\}\/actions\/runs/);
 });
 
+test("local monitor refreshes storage and activity without destructive permissions", () => {
+  assert.match(monitorWorkflow, /workflow_run:/);
+  assert.match(monitorWorkflow, /schedule:/);
+  assert.match(monitorWorkflow, /actions: read/);
+  assert.match(monitorWorkflow, /issues: write/);
+  assert.doesNotMatch(monitorWorkflow, /actions: write/);
+  assert.doesNotMatch(monitorScript, /request\("DELETE"/);
+  assert.match(monitorScript, /CURRENT_RUN_ID/);
+  assert.match(monitorScript, /completed steps \/ total steps/);
+});
+
 test("central dashboard discovers repositories dynamically and supports scoped cross-repo auth", () => {
   assert.match(centralWorkflow, /CENTRAL_DASHBOARD_TOKEN/);
   assert.match(centralScript, /\/user\/repos\?affiliation=/);
@@ -44,5 +57,6 @@ test("integration metadata keeps repository and account quota concepts separate"
   assert.equal(metadata.quota.account_metric, "ACCOUNT_QUOTA_STATUS");
   assert.equal(metadata.quota.account_capacity, "UNKNOWN_ACCOUNT_CAPACITY");
   assert.equal(metadata.local_dashboard.issue_number, 10);
+  assert.equal(metadata.local_dashboard.monitor_workflow_path, ".github/workflows/actions-storage-monitor.yml");
   assert.equal(metadata.central_dashboard.issue_number, 11);
 });
