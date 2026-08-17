@@ -7,7 +7,6 @@ on:
       - CI
       - Actions Artifact Retention
     types:
-      - requested
       - in_progress
       - completed
   schedule:
