@@ -4,8 +4,6 @@ import { existsSync, readFileSync } from "node:fs";
 
 const cleanupWorkflow = readFileSync(".github/workflows/actions-artifact-retention.yml", "utf8");
 const cleanupScript = readFileSync(".github/scripts/actions_artifact_retention.py", "utf8");
-const controlCenter = readFileSync("tools/github-control-center/server.mjs", "utf8");
-const startAll = readFileSync("tools/start-all.mjs", "utf8");
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 
 test("repository cleanup workflow is manual-only", () => {
@@ -30,22 +28,11 @@ test("cleanup policy preserves ambiguous and important provenance by default", (
   assert.doesNotMatch(cleanupScript, /request\("DELETE",\s*f"\/repos\/\{REPO\}\/actions\/runs/);
 });
 
-test("local control center covers account inventory, alerts and safe cleanup", () => {
-  assert.match(controlCenter, /\/user\/repos\?affiliation=owner/);
-  assert.match(controlCenter, /actions\/artifacts/);
-  assert.match(controlCenter, /actions\/caches/);
-  assert.match(controlCenter, /actions\/runs/);
-  assert.match(controlCenter, /settings\/billing\/usage/);
-  assert.match(controlCenter, /Repo اکنون اجرای فعال\/صف‌شده دارد/);
-  assert.match(controlCenter, /CLEANUP_PREVIEW_TTL_MS/);
-  assert.match(controlCenter, /پاکسازی موارد امن/);
-  assert.doesNotMatch(controlCenter, /actions\/runs\/\$\{item\.id\}/);
-});
-
-test("npm start launches Project Brain and GitHub Control Center together", () => {
-  assert.equal(pkg.version, "0.6.0");
-  assert.equal(pkg.scripts.start, "node tools/start-all.mjs");
-  assert.equal(pkg.scripts["github:ops"], "node tools/github-control-center/server.mjs");
-  assert.match(startAll, /src\/server\.ts/);
-  assert.match(startAll, /github-control-center\/server\.mjs/);
+test("Project Brain no longer embeds GitHub Control Center runtime", () => {
+  assert.equal(existsSync("tools/github-control-center/server.mjs"), false);
+  assert.equal(existsSync("tools/start-all.mjs"), false);
+  assert.equal(pkg.version, "0.6.1");
+  assert.equal(pkg.scripts.start, "node src/server.ts");
+  assert.equal(pkg.scripts["github:ops"], undefined);
+  assert.equal(pkg.scripts["check:github-ops"], undefined);
 });

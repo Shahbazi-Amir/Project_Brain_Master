@@ -1,27 +1,16 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "repository": "Shahbazi-Amir/Project_Brain_Master",
-  "control_center": {
-    "mode": "local_gh_authenticated",
-    "url": "http://127.0.0.1:3010",
-    "server_path": "tools/github-control-center/server.mjs",
-    "start_command": "npm run github:ops",
-    "all_services_command": "npm start",
-    "refresh_seconds": 300,
-    "monitoring_consumes_actions_minutes": false
-  },
+  "scope": "repository_local_only",
   "cleanup": {
-    "local_mode": "preview_then_explicit_confirmation",
+    "workflow_path": ".github/workflows/actions-artifact-retention.yml",
+    "workflow_mode": "manual_only",
     "skip_active_or_queued_repositories": true,
     "delete_workflow_runs": false,
-    "delete_logs": false,
-    "workflow_path": ".github/workflows/actions-artifact-retention.yml",
-    "workflow_mode": "manual_only"
+    "delete_logs": false
   },
-  "quota": {
-    "artifact_metric": "CURRENT_LIVE_ARTIFACT_BYTES",
-    "cache_metric": "CURRENT_CACHE_BYTES_PER_REPOSITORY",
-    "billing_metric": "ACCOUNT_ACTIONS_BILLING_USAGE_IF_AUTHORIZED",
-    "do_not_guess_unknown_capacity": true
+  "external_control_center": {
+    "embedded": false,
+    "note": "GitHub Control Center is a separate private/local project and is not part of Project Brain runtime."
   }
 }
