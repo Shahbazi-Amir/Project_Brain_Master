@@ -21,6 +21,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Validate Actions storage scripts
+        run: |
+          python3 -m py_compile \
+            .github/scripts/actions_artifact_retention.py \
+            .github/scripts/actions_storage_central_dashboard.py
+
       - name: Setup Node ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
