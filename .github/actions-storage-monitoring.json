@@ -3,7 +3,9 @@
   "repository": "Shahbazi-Amir/Project_Brain_Master",
   "local_dashboard": {
     "issue_number": 10,
-    "url": "https://github.com/Shahbazi-Amir/Project_Brain_Master/issues/10"
+    "url": "https://github.com/Shahbazi-Amir/Project_Brain_Master/issues/10",
+    "monitor_workflow_path": ".github/workflows/actions-storage-monitor.yml",
+    "monitor_script_path": ".github/scripts/actions_storage_local_monitor.py"
   },
   "cleanup": {
     "workflow_path": ".github/workflows/actions-artifact-retention.yml",
