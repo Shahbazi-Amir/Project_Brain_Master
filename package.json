@@ -1,17 +1,20 @@
 {
   "name": "project-brain-master",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Local-first project operating system that frames, matures, supervises and reviews Codex-powered project execution.",
   "engines": {"node": ">=22.18.0 <23 || >=24.12.0 <25"},
   "scripts": {
-    "start": "node src/server.ts",
+    "start": "node tools/start-all.mjs",
+    "start:brain": "node src/server.ts",
+    "github:ops": "node tools/github-control-center/server.mjs",
     "dev": "node --watch src/server.ts",
     "test": "node --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "check:ui": "node --check public/app.js",
-    "ci": "npm run typecheck && npm run check:ui && npm test"
+    "check:github-ops": "node --check tools/github-control-center/server.mjs && node --check tools/start-all.mjs",
+    "ci": "npm run typecheck && npm run check:ui && npm run check:github-ops && npm test"
   },
   "devDependencies": {"@types/node": "^22.18.0", "typescript": "^5.9.0"}
 }
