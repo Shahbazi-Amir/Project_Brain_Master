@@ -1,0 +1,56 @@
+name: Actions Artifact Retention
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Inventory only; do not delete artifacts"
+        required: true
+        default: true
+        type: boolean
+  schedule:
+    - cron: "17 3 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/actions-artifact-retention.yml"
+      - ".github/scripts/actions_artifact_retention.py"
+      - ".github/actions-storage-monitoring.json"
+      - "ops/github-actions/**"
+
+permissions:
+  actions: write
+  issues: write
+  contents: read
+
+concurrency:
+  group: actions-artifact-retention-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  inventory-and-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve cleanup mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          DRY_RUN=true
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DRY_RUN=false
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "false" ]]; then
+            DRY_RUN=false
+          fi
+          echo "DRY_RUN=$DRY_RUN" >> "$GITHUB_ENV"
+          echo "Cleanup mode: $([[ "$DRY_RUN" == "true" ]] && echo DRY_RUN || echo APPLY)"
+
+      - name: Inventory, conservative cleanup, and dashboard update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DASHBOARD_ISSUE_NUMBER: "10"
+          CENTRAL_DASHBOARD_URL: "https://github.com/Shahbazi-Amir/Project_Brain_Master/issues/11"
+        run: python3 .github/scripts/actions_artifact_retention.py
