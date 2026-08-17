@@ -200,15 +200,21 @@ def replace_section(body: str, heading: str, next_heading: str, replacement: str
 
 
 def main() -> int:
-    issue = request("GET", f"/repos/{REPO}/issues/{ISSUE_NUMBER}")
-    body = str(issue.get("body") or "")
+    # Compute fresh metrics first. These calls can take long enough for the retention
+    # workflow to update the same issue, so we intentionally do NOT hold an old issue
+    # body while collecting activity.
     artifacts = paginate(f"/repos/{REPO}/actions/artifacts?", "artifacts")
     runs = paginate(f"/repos/{REPO}/actions/runs?", "workflow_runs")
     workflows = paginate(f"/repos/{REPO}/actions/workflows?", "workflows")
-
-    body = re.sub(r"Updated UTC: .*", f"Updated UTC: {NOW.isoformat().replace('+00:00','Z')}", body, count=1)
-    body = replace_section(body, "## Storage", "## Workflow activity", storage_section(artifacts))
+    storage = storage_section(artifacts)
     activity, current = workflow_sections(runs, workflows)
+
+    # Re-fetch immediately before PATCH. Only our three monitoring sections are
+    # replaced; a newer Cleanup section written concurrently is therefore preserved.
+    issue = request("GET", f"/repos/{REPO}/issues/{ISSUE_NUMBER}")
+    body = str(issue.get("body") or "")
+    body = re.sub(r"Updated UTC: .*", f"Updated UTC: {NOW.isoformat().replace('+00:00','Z')}", body, count=1)
+    body = replace_section(body, "## Storage", "## Workflow activity", storage)
     body = replace_section(body, "## Workflow activity", "## Current active runs", activity)
     body = replace_section(body, "## Current active runs", "## Cleanup", current)
 
