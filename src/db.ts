@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { config } from "./config.ts";
-import type { DirectiveRecord, IterationRecord, ProjectRecord, ReviewResult, SupervisorDecision, UsageRecord } from "./types.ts";
+import type { DirectiveRecord, IterationRecord, ProjectDefinition, ProjectRecord, ReviewResult, SupervisorDecision, UsageRecord } from "./types.ts";
 
 mkdirSync(config.dataDir, { recursive: true });
 const db = new DatabaseSync(join(config.dataDir, "project-brain.sqlite"));
@@ -68,6 +68,7 @@ export function insertProject(project: ProjectRecord): void {
 export function listProjects(): ProjectRecord[] { return (db.prepare("SELECT * FROM projects ORDER BY updated_at DESC").all() as Record<string, unknown>[]).map(parseProject); }
 export function getProject(id: string): ProjectRecord | null { const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(id) as Record<string, unknown> | undefined; return row ? parseProject(row) : null; }
 export function setProjectStatus(id: string, status: ProjectRecord["status"]): void { db.prepare("UPDATE projects SET status = ?, updated_at = ? WHERE id = ?").run(status, new Date().toISOString(), id); }
+export function updateProjectDefinition(id: string, definition: ProjectDefinition): void { db.prepare("UPDATE projects SET definition_json = ?, updated_at = ? WHERE id = ?").run(JSON.stringify(definition), new Date().toISOString(), id); }
 export function addDirective(record: DirectiveRecord): void { db.prepare("INSERT INTO directives (id, project_id, text, active, created_at) VALUES (?, ?, ?, ?, ?)").run(record.id, record.projectId, record.text, record.active ? 1 : 0, record.createdAt); }
 export function listDirectives(projectId: string): DirectiveRecord[] {
   return (db.prepare("SELECT * FROM directives WHERE project_id = ? AND active = 1 ORDER BY created_at ASC").all(projectId) as Record<string, unknown>[])
