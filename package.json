@@ -1,6 +1,6 @@
 {
   "name": "project-brain-master",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "Local-first project operating system that frames, matures, supervises and reviews Codex-powered project execution.",
@@ -10,7 +10,7 @@
     "dev": "node --watch src/server.ts",
     "test": "node --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "check:ui": "node --check public/app.js && node --check public/execution-dashboard.js",
+    "check:ui": "node --check public/app.js && node --check public/execution-dashboard.js && node --check public/github-integration.js",
     "ci": "npm run typecheck && npm run check:ui && npm test"
   },
   "devDependencies": {"@types/node": "^22.18.0", "typescript": "^5.9.0"}
