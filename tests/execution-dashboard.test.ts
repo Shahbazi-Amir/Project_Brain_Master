@@ -5,6 +5,7 @@ import { maturationSchema } from "../src/schemas.ts";
 
 const dashboard = readFileSync("public/execution-dashboard.js", "utf8");
 const html = readFileSync("public/index.html", "utf8");
+const server = readFileSync("src/server.ts", "utf8");
 
 test("execution stages carry countable tasks and per-stage time", () => {
   const stage = maturationSchema.properties.executionStages.items;
@@ -12,6 +13,7 @@ test("execution stages carry countable tasks and per-stage time", () => {
   assert.ok("estimatedTime" in stage.properties);
   assert.equal(stage.properties.tasks.minItems, 1);
   assert.ok("executionStages" in maturationSchema.properties.finalDefinition.properties);
+  assert.match(server, /finalDefinition\.executionStages = run\.structured\.executionStages/);
 });
 
 test("execution dashboard shows stages, tasks, goal, time and progress", () => {
@@ -25,6 +27,6 @@ test("execution dashboard shows stages, tasks, goal, time and progress", () => {
 });
 
 test("execution dashboard assets are loaded by the main UI", () => {
-  assert.match(html, /execution-dashboard\.css\?v=0\.7\.0/);
-  assert.match(html, /execution-dashboard\.js\?v=0\.7\.0/);
+  assert.match(html, /execution-dashboard\.css\?v=0\.8\.0/);
+  assert.match(html, /execution-dashboard\.js\?v=0\.8\.0/);
 });
