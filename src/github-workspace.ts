@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { config } from "./config.ts";
@@ -8,6 +8,7 @@ import type { GitHubIntegration, IterationRecord, ProjectRecord } from "./types.
 
 const execFileAsync = promisify(execFile);
 const protectedBranches = new Set(["main", "master", "trunk", "production", "prod"]);
+const disabledPushUrl = "file:///dev/null/project-brain-push-disabled";
 const blockedPathPatterns = [
   /(^|\/)\.env($|\.)/i,
   /(^|\/)(credentials?|secrets?)(\.|\/|$)/i,
@@ -79,6 +80,25 @@ async function assertRuntimeReady(): Promise<void> {
   if (!auth.ok) throw new Error("GitHub CLI روی مک وارد نشده است؛ یک‌بار gh auth login را روی همان مک انجام بده");
 }
 
+function installProtectedPushGuard(workspace: string): void {
+  const hookPath = join(workspace, ".git", "hooks", "pre-push");
+  const hook = `#!/bin/sh
+while read local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/brain/*) ;;
+    *) echo "Project Brain safety: push to $remote_ref is blocked" >&2; exit 1 ;;
+  esac
+done
+exit 0
+`;
+  writeFileSync(hookPath, hook, "utf8");
+  chmodSync(hookPath, 0o700);
+}
+
+async function disableExecutorPush(workspace: string): Promise<void> {
+  await run("git", ["-C", workspace, "config", "remote.origin.pushurl", disabledPushUrl]);
+}
+
 async function assertWorkspaceIdentity(workspace: string, integration: GitHubIntegration): Promise<void> {
   assertSafeBranch(integration.workBranch);
   const currentBranch = await run("git", ["-C", workspace, "branch", "--show-current"]);
@@ -86,6 +106,8 @@ async function assertWorkspaceIdentity(workspace: string, integration: GitHubInt
   const origin = await run("git", ["-C", workspace, "remote", "get-url", "origin"]);
   const normalizedOrigin = normalizeGitHubRepository(origin.stdout);
   if (normalizedOrigin.toLowerCase() !== integration.repository.toLowerCase()) throw new Error("origin این Workspace با مخزن تأییدشده یکی نیست");
+  const pushUrl = await run("git", ["-C", workspace, "config", "--get", "remote.origin.pushurl"], undefined, true);
+  if (!pushUrl.ok || pushUrl.stdout !== disabledPushUrl) throw new Error("محافظ Push Workspace تغییر کرده است؛ تحویل متوقف شد");
 }
 
 export async function prepareGitHubWorkspace(projectId: string, projectName: string, repositoryInput: string): Promise<{ workspacePath: string; integration: GitHubIntegration }> {
@@ -110,6 +132,8 @@ export async function prepareGitHubWorkspace(projectId: string, projectName: str
   const email = identity.id ? `${identity.id}+${login}@users.noreply.github.com` : `${login}@users.noreply.github.com`;
   await run("git", ["-C", workspacePath, "config", "user.name", login]);
   await run("git", ["-C", workspacePath, "config", "user.email", email]);
+  installProtectedPushGuard(workspacePath);
+  await disableExecutorPush(workspacePath);
 
   return {
     workspacePath,
@@ -140,7 +164,13 @@ export async function checkpointGitHub(project: ProjectRecord, iteration: Iterat
   const task = iteration.supervisor?.taskTitle?.replace(/[\r\n]+/g, " ").slice(0, 72) || `iteration ${iteration.number}`;
   await run("git", ["-C", project.workspacePath, "commit", "-m", `brain: checkpoint ${iteration.number} - ${task}`]);
   const head = await run("git", ["-C", project.workspacePath, "rev-parse", "HEAD"]);
-  await run("git", ["-C", project.workspacePath, "push", "--set-upstream", "origin", integration.workBranch]);
+  const origin = await run("git", ["-C", project.workspacePath, "remote", "get-url", "origin"]);
+  await run("git", ["-C", project.workspacePath, "config", "remote.origin.pushurl", origin.stdout]);
+  try {
+    await run("git", ["-C", project.workspacePath, "push", "--set-upstream", "origin", integration.workBranch]);
+  } finally {
+    await disableExecutorPush(project.workspacePath);
+  }
   persistIntegration(project, { status: "PUSHED", lastPushedCommit: head.stdout, lastPushAt: new Date().toISOString() });
 }
 
