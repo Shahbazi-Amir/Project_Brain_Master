@@ -3,6 +3,7 @@ import { basename, extname, resolve } from "node:path";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { config } from "./config.ts";
 import { addDirective, getProject, insertProject, listDirectives, listIterations, listProjects, setProjectStatus } from "./db.ts";
+import { prepareGitHubWorkspace } from "./github-workspace.ts";
 import { loopController } from "./loop.ts";
 import { codexProvider } from "./provider.ts";
 import { runArchitect, runMaturation } from "./roles.ts";
@@ -148,6 +149,7 @@ const server = createServer(async (req, res) => {
         run.structured.finalDefinition.humanDecisionsRequired = [];
         run.structured.finalDefinition.resourceReferences = [];
         run.structured.finalDefinition.executionContract = run.structured.executionContract;
+        run.structured.finalDefinition.executionStages = run.structured.executionStages;
       }
       return json(res, 200, { maturation: run.structured, usage: run.usage, maxLoopIterations: config.defaultMaxIterations });
     }
@@ -160,6 +162,15 @@ const server = createServer(async (req, res) => {
       const profile = requireProfile(body.profile);
       const executorModeRaw = String(body.executorMode ?? "codex");
       const executorMode: ExecutorMode = executorModeRaw === "manual" ? "manual" : "codex";
+      const githubRepository = String(body.githubRepository ?? "").trim();
+      let workspacePath: string;
+      if (githubRepository) {
+        const prepared = await prepareGitHubWorkspace(id, definition.name, githubRepository);
+        workspacePath = prepared.workspacePath;
+        definition.githubIntegration = prepared.integration;
+      } else {
+        workspacePath = resolveWorkspace(id, String(body.workspacePath ?? ""));
+      }
       const project: ProjectRecord = {
         id,
         name: definition.name,
@@ -167,7 +178,7 @@ const server = createServer(async (req, res) => {
         description: String(body.description ?? ""),
         status: "READY",
         definition,
-        workspacePath: resolveWorkspace(id, String(body.workspacePath ?? "")),
+        workspacePath,
         executorMode,
         minQualityScore: Math.min(100, Math.max(1, Number(body.minQualityScore ?? config.defaultMinQuality))),
         maxIterations: Math.min(13, Math.max(1, Number(body.maxIterations ?? config.defaultMaxIterations))),
