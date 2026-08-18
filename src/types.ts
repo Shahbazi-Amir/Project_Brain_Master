@@ -6,6 +6,16 @@ export type ReviewStatus = "PASS" | "FAIL" | "PARTIAL";
 export type FactSource = "user_explicit" | "architect_inference";
 export type SelectionMode = "single" | "multiple";
 
+export interface GitHubIntegration {
+  repository: string;
+  baseBranch: string;
+  workBranch: string;
+  status: "READY" | "PUSHED" | "PR_OPEN" | "ERROR";
+  draftPrUrl: string;
+  lastPushedCommit: string;
+  lastPushAt: string;
+}
+
 export interface ProjectDefinition {
   name: string;
   projectType: string;
@@ -36,6 +46,7 @@ export interface ProjectDefinition {
   executionContract?: ExecutionContract;
   executionStages?: ExecutionStage[];
   resourceReferences?: string[];
+  githubIntegration?: GitHubIntegration;
 }
 
 export interface ChoiceOption { id: string; label: string; note: string; }
