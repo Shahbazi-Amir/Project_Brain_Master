@@ -1,4 +1,5 @@
 import { addEvent, addUsage, getProject, insertIteration, latestAwaitingManual, listDirectives, listIterations, nextIterationNumber, setProjectStatus, updateIteration } from "./db.ts";
+import { checkpointGitHub, ensureDraftPullRequest } from "./github-workspace.ts";
 import { decideAfterReview, nextStagnantCount } from "./policy.ts";
 import { executorPrompt } from "./prompts.ts";
 import { codexProvider } from "./provider.ts";
@@ -17,6 +18,40 @@ export class LoopController {
     run.controller.abort(); setProjectStatus(projectId, finalStatus); addEvent(projectId, "run.stop_requested", { finalStatus }); return true;
   }
 
+  private async deliverReviewedCheckpoint(project: ProjectRecord, iteration: IterationRecord, review: ReviewResult, projectComplete: boolean): Promise<boolean> {
+    if (!project.definition.githubIntegration || review.status !== "PASS") return true;
+    try {
+      await checkpointGitHub(project, iteration);
+      addEvent(project.id, "github.checkpoint_reviewed", { iteration: iteration.number, branch: project.definition.githubIntegration.workBranch });
+      if (projectComplete) {
+        const prUrl = await ensureDraftPullRequest(project);
+        addEvent(project.id, "github.draft_pr_ready", { prUrl, branch: project.definition.githubIntegration.workBranch });
+      }
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setProjectStatus(project.id, "NEEDS_HUMAN");
+      addEvent(project.id, "github.delivery_blocked", { iteration: iteration.number, message });
+      writeState({ ...project, status: "NEEDS_HUMAN" }, `GitHub delivery blocked safely: ${message}`);
+      return false;
+    }
+  }
+
+  private async finalizeExistingGitHubWork(project: ProjectRecord, summary: string): Promise<boolean> {
+    if (!project.definition.githubIntegration) return true;
+    try {
+      const prUrl = await ensureDraftPullRequest(project);
+      addEvent(project.id, "github.draft_pr_ready", { prUrl, branch: project.definition.githubIntegration.workBranch, summary });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setProjectStatus(project.id, "NEEDS_HUMAN");
+      addEvent(project.id, "github.delivery_blocked", { message });
+      writeState({ ...project, status: "NEEDS_HUMAN" }, `GitHub delivery blocked safely: ${message}`);
+      return false;
+    }
+  }
+
   async run(projectId: string, requestedIterations: number): Promise<void> {
     if (this.active.has(projectId)) throw new Error("Project is already running");
     const controller = new AbortController(); this.active.set(projectId, { controller, mode: requestedIterations === 1 ? "once" : "loop" });
@@ -30,7 +65,10 @@ export class LoopController {
         const supervisorRun = await runSupervisor(project, directives, allIterations, controller.signal); addUsage(projectId, null, "supervisor", supervisorRun.usage);
         const decision = supervisorRun.structured; if (!decision) throw new Error("Supervisor returned no structured decision");
         if (decision.recommendedAction === "ASK_USER") { setProjectStatus(projectId, "NEEDS_HUMAN"); addEvent(projectId, "supervisor.needs_human", { question: decision.userQuestion }); return; }
-        if (decision.recommendedAction === "COMPLETE") { setProjectStatus(projectId, "COMPLETED"); addEvent(projectId, "supervisor.completed", { summary: decision.reasoningSummary }); return; }
+        if (decision.recommendedAction === "COMPLETE") {
+          if (!await this.finalizeExistingGitHubWork(project, decision.reasoningSummary)) return;
+          setProjectStatus(projectId, "COMPLETED"); addEvent(projectId, "supervisor.completed", { summary: decision.reasoningSummary }); return;
+        }
 
         const iteration: IterationRecord = {
           id: crypto.randomUUID(), projectId, number: nextIterationNumber(projectId), status: "RUNNING", supervisor: decision,
@@ -49,8 +87,10 @@ export class LoopController {
         const review = reviewRun.structured; if (!review) throw new Error("Reviewer returned no structured review");
         stagnant = nextStagnantCount(previousScore, review.score, stagnant); previousScore = review.score;
         const loopDecision = decideAfterReview(project, review, iteration.number, stagnant);
-        updateIteration(iteration.id, { status: review.status === "PASS" ? "PASSED" : "FAILED", reviewer: review, decision: loopDecision, completedAt: new Date().toISOString() });
+        const completedIteration = { ...iteration, status: review.status === "PASS" ? "PASSED" as const : "FAILED" as const, reviewer: review, decision: loopDecision, completedAt: new Date().toISOString() };
+        updateIteration(iteration.id, { status: completedIteration.status, reviewer: review, decision: loopDecision, completedAt: completedIteration.completedAt });
         addEvent(projectId, "iteration.completed", { iteration: iteration.number, score: review.score, decision: loopDecision });
+        if (!await this.deliverReviewedCheckpoint(project, completedIteration, review, loopDecision === "PROJECT_COMPLETE")) return;
         if (loopDecision === "PROJECT_COMPLETE") { setProjectStatus(projectId, "COMPLETED"); return; }
         if (loopDecision === "NEEDS_HUMAN" || loopDecision === "NO_PROGRESS") { setProjectStatus(projectId, "NEEDS_HUMAN"); return; }
         if (loopDecision === "MAX_ITERATIONS") { setProjectStatus(projectId, "PAUSED"); return; }
@@ -71,7 +111,9 @@ export class LoopController {
     const reviewRun = await runReviewer(project, iteration.supervisor, result, directives, history); addUsage(projectId, iteration.id, "reviewer", reviewRun.usage);
     const review = reviewRun.structured; if (!review) throw new Error("Reviewer returned no structured review");
     const decision = decideAfterReview(project, review, iteration.number, 0);
-    updateIteration(iteration.id, { status: review.status === "PASS" ? "PASSED" : "FAILED", reviewer: review, decision, completedAt: new Date().toISOString() });
+    const completedIteration = { ...iteration, executorResult: result, status: review.status === "PASS" ? "PASSED" as const : "FAILED" as const, reviewer: review, decision, completedAt: new Date().toISOString() };
+    updateIteration(iteration.id, { status: completedIteration.status, reviewer: review, decision, completedAt: completedIteration.completedAt });
+    if (!await this.deliverReviewedCheckpoint(project, completedIteration, review, decision === "PROJECT_COMPLETE")) return review;
     setProjectStatus(projectId, decision === "PROJECT_COMPLETE" ? "COMPLETED" : decision === "NEEDS_HUMAN" ? "NEEDS_HUMAN" : "PAUSED");
     return review;
   }
