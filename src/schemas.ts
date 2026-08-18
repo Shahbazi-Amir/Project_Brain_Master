@@ -84,6 +84,27 @@ const executionContractSchema = {
   additionalProperties: false
 } as const;
 
+const executionStageSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    purpose: { type: "string", description: "هدف دقیق و قابل فهم این فاز برای کاربر" },
+    tasks: { type: "array", minItems: 1, maxItems: 8, items: { type: "string" }, description: "کارهای اجرایی مشخص و قابل شمارش این فاز، به ترتیب انجام" },
+    outputs: stringArray,
+    doneWhen: { type: "string" },
+    estimatedTime: { type: "string", description: "برآورد زمان همین فاز، نه زمان کل پروژه" }
+  },
+  required: ["title", "purpose", "tasks", "outputs", "doneWhen", "estimatedTime"],
+  additionalProperties: false
+} as const;
+
+const matureDefinitionSchema = {
+  type: "object",
+  properties: { ...definitionProperties, executionStages: { type: "array", minItems: 1, maxItems: 8, items: executionStageSchema } },
+  required: [...Object.keys(definitionProperties), "executionStages"],
+  additionalProperties: false
+} as const;
+
 export const maturationSchema = {
   type: "object",
   properties: {
@@ -91,8 +112,8 @@ export const maturationSchema = {
     clarifiedIdea: { type: "string" }, productDefinition: { type: "string" }, valueProposition: { type: "string" }, desiredImpact: { type: "string" },
     whatChanged: stringArray, resolvedDecisions: stringArray, remainingAssumptions: stringArray,
     recommendedApproach: { type: "object", properties: { name: { type: "string" }, why: { type: "string" } }, required: ["name", "why"], additionalProperties: false },
-    executionStages: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", properties: { title: { type: "string" }, purpose: { type: "string" }, outputs: stringArray, doneWhen: { type: "string" } }, required: ["title", "purpose", "outputs", "doneWhen"], additionalProperties: false } },
-    recommendedDeliveryFormats: stringArray, executionRisks: stringArray, executionContract: executionContractSchema, finalDefinition: definitionSchema
+    executionStages: { type: "array", minItems: 1, maxItems: 8, items: executionStageSchema },
+    recommendedDeliveryFormats: stringArray, executionRisks: stringArray, executionContract: executionContractSchema, finalDefinition: matureDefinitionSchema
   },
   required: ["finalProfile", "clarifiedIdea", "productDefinition", "valueProposition", "desiredImpact", "whatChanged", "resolvedDecisions", "remainingAssumptions", "recommendedApproach", "executionStages", "recommendedDeliveryFormats", "executionRisks", "executionContract", "finalDefinition"],
   additionalProperties: false

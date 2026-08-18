@@ -34,6 +34,7 @@ export interface ProjectDefinition {
   deliveryFormats?: string[];
   executionStrategy?: string;
   executionContract?: ExecutionContract;
+  executionStages?: ExecutionStage[];
   resourceReferences?: string[];
 }
 
@@ -85,8 +86,10 @@ export interface DiscoveryResult {
 export interface ExecutionStage {
   title: string;
   purpose: string;
+  tasks: string[];
   outputs: string[];
   doneWhen: string;
+  estimatedTime: string;
 }
 export interface RiskFallback { risk: string; impact: string; fallback: string; }
 export interface ExecutionContract {
