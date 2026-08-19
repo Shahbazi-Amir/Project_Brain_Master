@@ -104,10 +104,22 @@ export function initializeProjectTasks(projectId: string, stages: ExecutionStage
   const insert = db.prepare("INSERT INTO tasks (id, project_id, title, status, created_at, stage_index, task_index, iteration_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
   stages.forEach((stage, stageIndex) => (stage.tasks || []).forEach((title, taskIndex) => insert.run(crypto.randomUUID(), projectId, title, "PENDING", now, stageIndex, taskIndex, "", now)));
 }
+function ensureTaskRows(projectId: string): void {
+  const count = Number((db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE project_id = ?").get(projectId) as { n: number } | undefined)?.n || 0);
+  if (count > 0) return;
+  const projectRow = db.prepare("SELECT definition_json FROM projects WHERE id = ?").get(projectId) as { definition_json?: string } | undefined;
+  if (!projectRow?.definition_json) return;
+  try {
+    const definition = JSON.parse(projectRow.definition_json) as ProjectDefinition;
+    if (Array.isArray(definition.executionStages) && definition.executionStages.some(stage => Array.isArray(stage.tasks) && stage.tasks.length)) initializeProjectTasks(projectId, definition.executionStages);
+  } catch {}
+}
 export function listTasks(projectId: string): TaskRecord[] {
+  ensureTaskRows(projectId);
   return (db.prepare("SELECT * FROM tasks WHERE project_id = ? ORDER BY stage_index ASC, task_index ASC").all(projectId) as Record<string, unknown>[]).map(parseTask);
 }
 export function claimNextTask(projectId: string, iterationId: string): TaskRecord | null {
+  ensureTaskRows(projectId);
   const row = db.prepare("SELECT * FROM tasks WHERE project_id = ? AND status IN ('RUNNING','ATTENTION','WAITING','PAUSED','PENDING') ORDER BY CASE status WHEN 'RUNNING' THEN 0 WHEN 'ATTENTION' THEN 1 WHEN 'WAITING' THEN 2 WHEN 'PAUSED' THEN 3 ELSE 4 END, stage_index ASC, task_index ASC LIMIT 1").get(projectId) as Record<string, unknown> | undefined;
   if (!row) return null;
   const task = parseTask(row);
@@ -117,6 +129,7 @@ export function claimNextTask(projectId: string, iterationId: string): TaskRecor
 }
 export function setTaskStatus(id: string, status: TaskStatus): void { db.prepare("UPDATE tasks SET status=?, updated_at=? WHERE id=?").run(status, new Date().toISOString(), id); }
 export function markNextTaskWaiting(projectId: string): TaskRecord | null {
+  ensureTaskRows(projectId);
   const row = db.prepare("SELECT * FROM tasks WHERE project_id = ? AND status IN ('PENDING','ATTENTION','PAUSED') ORDER BY stage_index ASC, task_index ASC LIMIT 1").get(projectId) as Record<string, unknown> | undefined;
   if (!row) return null;
   const task = parseTask(row); setTaskStatus(task.id, "WAITING"); return { ...task, status: "WAITING" };
