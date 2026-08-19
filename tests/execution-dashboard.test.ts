@@ -6,6 +6,7 @@ import { maturationSchema } from "../src/schemas.ts";
 const dashboard = readFileSync("public/execution-dashboard.js", "utf8");
 const html = readFileSync("public/index.html", "utf8");
 const server = readFileSync("src/server.ts", "utf8");
+const db = readFileSync("src/db.ts", "utf8");
 
 test("execution stages carry countable tasks and per-stage time", () => {
   const stage = maturationSchema.properties.executionStages.items;
@@ -16,17 +17,19 @@ test("execution stages carry countable tasks and per-stage time", () => {
   assert.match(server, /finalDefinition\.executionStages = run\.structured\.executionStages/);
 });
 
-test("execution dashboard shows stages, tasks, goal, time and progress", () => {
-  assert.match(dashboard, /تعداد فازها/);
-  assert.match(dashboard, /کل کارها/);
-  assert.match(dashboard, /هدف دقیق/);
-  assert.match(dashboard, /زمان این فاز/);
+test("execution dashboard uses persisted task states and compact stage checklist", () => {
+  assert.match(dashboard, /payload\.tasks/);
+  assert.match(dashboard, /مرحله \$\{stageIndex \+ 1\} از \$\{stages\.length\}/);
   assert.match(dashboard, /کار فعلی/);
-  assert.match(dashboard, /پیشرفت کل/);
-  assert.match(dashboard, /passedCount/);
+  assert.match(dashboard, /پیشرفت واقعی/);
+  assert.match(dashboard, /TASK_LABELS/);
+  assert.match(dashboard, /جزئیات این مرحله/);
+  assert.match(db, /initializeProjectTasks/);
+  assert.match(db, /claimNextTask/);
+  assert.match(db, /setTaskStatus/);
 });
 
 test("execution dashboard assets are loaded by the main UI", () => {
-  assert.match(html, /execution-dashboard\.css\?v=0\.8\.0/);
-  assert.match(html, /execution-dashboard\.js\?v=0\.8\.0/);
+  assert.match(html, /execution-dashboard\.css\?v=0\.8\.1/);
+  assert.match(html, /execution-dashboard\.js\?v=0\.8\.1/);
 });
