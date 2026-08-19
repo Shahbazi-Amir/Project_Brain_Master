@@ -1,37 +1,63 @@
 const originalFetch = window.fetch.bind(window);
+let skipNextAutomaticRun = false;
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 }
-
 function safeGitHubUrl(value) {
   const clean = String(value || '').trim();
   return /^https:\/\/github\.com\//i.test(clean) ? clean : '';
 }
 
-function injectGitHubRepositoryField() {
+function injectGitHubRepositoryFields() {
   const workspace = document.querySelector('#finalWorkspace');
-  if (!workspace || document.querySelector('#finalGitHubRepo')) return;
-  const label = document.createElement('label');
-  label.className = 'github-repo-field';
-  label.innerHTML = `مخزن GitHub <span class="optional">اختیاری</span>
-    <input id="finalGitHubRepo" class="ltr" placeholder="owner/repo یا https://github.com/owner/repo">
-    <small>اگر پر شود، Brain یک Clone جدا و Branch امن brain/* می‌سازد؛ پوشه کاری بالا برای اجرا استفاده نمی‌شود.</small>`;
-  workspace.closest('label')?.after(label);
+  if (!workspace) return;
+  if (!document.querySelector('#finalGitHubRepo')) {
+    const label = document.createElement('label');
+    label.className = 'github-repo-field';
+    label.innerHTML = `مخزن اجرای کار <span class="optional">اختیاری</span>
+      <input id="finalGitHubRepo" class="ltr" placeholder="owner/repo یا https://github.com/owner/repo">
+      <small>Brain فقط روی Clone جدا و Branch امن brain/* کار می‌کند؛ main/master دست‌نخورده می‌ماند.</small>`;
+    workspace.closest('label')?.after(label);
+  }
+  if (!document.querySelector('#finalSourceRepos')) {
+    const executionLabel = document.querySelector('#finalGitHubRepo')?.closest('label');
+    const label = document.createElement('label');
+    label.className = 'github-repo-field source-repo-field';
+    label.innerHTML = `مخزن منابع <span class="optional">اختیاری</span>
+      <input id="finalSourceRepos" class="ltr" placeholder="owner/resources-repo — چند مخزن را با کاما جدا کن">
+      <small>این مخزن‌ها به‌عنوان منبع Clone و فایل‌هایشان شمارش و دسته‌بندی می‌شوند؛ محل اجرای کار نیستند.</small>`;
+    executionLabel?.after(label);
+  }
+  const create = document.querySelector('#createProjectBtn');
+  if (create && !create.dataset.preflightLabel) {
+    create.dataset.preflightLabel = '1';
+    create.textContent = 'ساخت پروژه و بررسی قبل از اجرا';
+  }
 }
 
 window.fetch = async (input, init = {}) => {
   const url = typeof input === 'string' ? input : input?.url || '';
   const method = String(init.method || 'GET').toUpperCase();
   if (method === 'POST' && url === '/api/projects' && typeof init.body === 'string') {
-    const repo = document.querySelector('#finalGitHubRepo')?.value?.trim() || '';
-    if (repo) {
-      try {
-        const body = JSON.parse(init.body);
-        body.githubRepository = repo;
-        init = {...init, body:JSON.stringify(body)};
-      } catch {}
-    }
+    try {
+      const body = JSON.parse(init.body);
+      const executionRepo = document.querySelector('#finalGitHubRepo')?.value?.trim() || '';
+      const sourceRepos = document.querySelector('#finalSourceRepos')?.value?.trim() || '';
+      if (executionRepo) body.githubRepository = executionRepo;
+      if (sourceRepos) body.sourceRepositories = sourceRepos.split(/[,\n]+/).map(v => v.trim()).filter(Boolean);
+      init = {...init, body:JSON.stringify(body)};
+    } catch {}
+    const response = await originalFetch(input, init);
+    if (response.ok) skipNextAutomaticRun = true;
+    return response;
+  }
+  if (method === 'POST' && /\/api\/projects\/[^/]+\/run-loop$/.test(url) && skipNextAutomaticRun) {
+    skipNextAutomaticRun = false;
+    return new Response(JSON.stringify({started:false, preflight:true, message:'Project created. Waiting for explicit start after preflight.'}), {
+      status:202,
+      headers:{'content-type':'application/json; charset=utf-8'}
+    });
   }
   return originalFetch(input, init);
 };
@@ -48,31 +74,31 @@ async function renderGitHubDeliveryStatus() {
     if (!response.ok) return;
     const payload = await response.json();
     const integration = payload.project?.definition?.githubIntegration;
-    if (!integration) return;
-    const prUrl = safeGitHubUrl(integration.draftPrUrl);
-    const repoUrl = `https://github.com/${encodeURI(integration.repository)}`;
+    const sourceRepos = payload.project?.definition?.resourceRepositories || [];
+    if (!integration && !sourceRepos.length) return;
+    const prUrl = safeGitHubUrl(integration?.draftPrUrl);
+    const repoUrl = integration ? `https://github.com/${encodeURI(integration.repository)}` : '';
+    const sourceText = sourceRepos.length ? sourceRepos.map(repo => `${repo.repository} · ${repo.fileCount} فایل`).join(' | ') : '—';
     const box = document.createElement('div');
     box.className = 'github-delivery-status';
-    box.innerHTML = `<div><span>GitHub</span><b>${esc(integration.repository)}</b></div>
-      <div><span>Branch امن</span><b class="ltr-inline">${esc(integration.workBranch)}</b></div>
-      <div><span>تحویل</span><b>${integration.status === 'PR_OPEN' ? 'Draft PR آماده' : integration.status === 'PUSHED' ? 'Checkpoint Push شده' : 'آماده اجرا'}</b></div>
-      <div class="github-links"><a href="${repoUrl}" target="_blank" rel="noreferrer">باز کردن مخزن</a>${prUrl ? `<a href="${prUrl}" target="_blank" rel="noreferrer">باز کردن Draft PR</a>` : ''}</div>`;
+    box.innerHTML = `<div><span>مخزن اجرا</span><b>${esc(integration?.repository || 'Workspace محلی')}</b></div>
+      <div><span>Branch امن</span><b class="ltr-inline">${esc(integration?.workBranch || '—')}</b></div>
+      <div><span>منابع GitHub</span><b>${esc(sourceText)}</b></div>
+      <div class="github-links">${repoUrl ? `<a href="${repoUrl}" target="_blank" rel="noreferrer">مخزن اجرا</a>` : ''}${prUrl ? `<a href="${prUrl}" target="_blank" rel="noreferrer">Draft PR</a>` : ''}</div>`;
     hero.querySelector('.project-summary')?.after(box);
   } catch {
-    // GitHub delivery UI must never break the core Project Brain screen.
-  } finally {
-    statusLoading = false;
-  }
+    // Never break core UI because a supplemental GitHub status failed.
+  } finally { statusLoading = false; }
 }
 
 const main = document.querySelector('#main');
 if (main) {
   const observer = new MutationObserver(() => {
-    injectGitHubRepositoryField();
+    injectGitHubRepositoryFields();
     if (main.querySelector('.project-hero')) queueMicrotask(renderGitHubDeliveryStatus);
   });
   observer.observe(main, {childList:true, subtree:true});
 }
 
-injectGitHubRepositoryField();
+injectGitHubRepositoryFields();
 setInterval(renderGitHubDeliveryStatus, 3000);
