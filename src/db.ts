@@ -41,14 +41,16 @@ CREATE TABLE IF NOT EXISTS usage (
 CREATE INDEX IF NOT EXISTS idx_iterations_project ON iterations(project_id, number);
 CREATE INDEX IF NOT EXISTS idx_directives_project ON directives(project_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_project ON events(project_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id, stage_index, task_index);
 `);
 
+// Migrate legacy task tables before creating indexes that reference the new columns.
+// CREATE TABLE IF NOT EXISTS does not add columns to an existing SQLite table.
 const taskColumns = new Set((db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[]).map(row => row.name));
 if (!taskColumns.has("stage_index")) db.exec("ALTER TABLE tasks ADD COLUMN stage_index INTEGER NOT NULL DEFAULT 0;");
 if (!taskColumns.has("task_index")) db.exec("ALTER TABLE tasks ADD COLUMN task_index INTEGER NOT NULL DEFAULT 0;");
 if (!taskColumns.has("iteration_id")) db.exec("ALTER TABLE tasks ADD COLUMN iteration_id TEXT NOT NULL DEFAULT '';");
 if (!taskColumns.has("updated_at")) db.exec("ALTER TABLE tasks ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';");
+db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id, stage_index, task_index);");
 
 db.exec("UPDATE projects SET max_iterations = 13 WHERE max_iterations <> 13;");
 
