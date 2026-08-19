@@ -30,6 +30,9 @@ const EVENT_LABELS = {
   'directive.added':'دستور جدید ثبت شد'
 };
 
+const BLOCKER_EVENTS = new Set(['supervisor.needs_human','run.error','github.delivery_blocked','execution.target_change_blocked','resources.repo_error']);
+const RECOVERY_EVENTS = new Set(['directive.added','execution.target_resolved','resources.repo_ready','preflight.checked','run.started','supervisor.decided','iteration.started','executor.started','executor.completed','reviewer.started','reviewer.completed','iteration.completed','github.checkpoint_reviewed','github.draft_pr_ready']);
+
 function eventText(event) {
   const p = event.payload || {};
   const detail = p.question || p.message || p.task || p.summary || p.repository || p.workspacePath || '';
@@ -39,18 +42,27 @@ function timeText(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('fa-IR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }
+function activeIssues(payload) {
+  const preflight = payload.preflight || {};
+  const issues = Array.isArray(preflight.issues) ? preflight.issues : [];
+  const blocker = preflight.lastBlocker;
+  if (!blocker || !BLOCKER_EVENTS.has(blocker.eventType)) return issues;
+  const blockerTime = Date.parse(blocker.createdAt || '');
+  const recovered = (payload.events || []).some(event => RECOVERY_EVENTS.has(event.eventType) && Date.parse(event.createdAt || '') > blockerTime);
+  return recovered ? [] : issues;
+}
 
 function inspectorHtml(payload) {
   const preflight = payload.preflight || {};
   const target = preflight.executionTarget || {};
   const repos = preflight.resourceRepositories || [];
-  const issues = preflight.issues || [];
+  const issues = activeIssues(payload);
   const required = preflight.requiredInputs || [];
   const events = payload.events || [];
   const latest = events[0];
   const canStart = !payload.running && !['COMPLETED','STOPPED'].includes(payload.project.status);
   const sourceRows = repos.length ? repos.map(repo => `<li><b>${runtimeEsc(repo.repository)}</b><span>${repo.fileCount} فایل · ${runtimeEsc((repo.categories || []).join('، ') || 'دسته‌بندی نشده')}</span></li>`).join('') : '<li><span>مخزن منبع GitHub ثبت نشده.</span></li>';
-  const issueRows = issues.length ? issues.map(issue => `<li>${runtimeEsc(issue)}</li>`).join('') : '<li class="ok-item">مشکل اجرایی ثبت‌شده‌ای وجود ندارد.</li>';
+  const issueRows = issues.length ? issues.map(issue => `<li>${runtimeEsc(issue)}</li>`).join('') : '<li class="ok-item">مشکل اجرایی فعال ثبت نشده است.</li>';
   const requiredRows = required.length ? required.map(item => `<li>${runtimeEsc(item)}</li>`).join('') : '<li>ورودی اجباری دیگری در قرارداد ثبت نشده.</li>';
   const logRows = events.slice(0, 30).map(event => `<li class="runtime-log-row"><time>${runtimeEsc(timeText(event.createdAt))}</time><span>${runtimeEsc(eventText(event))}</span></li>`).join('') || '<li>هنوز لاگی ثبت نشده.</li>';
 
