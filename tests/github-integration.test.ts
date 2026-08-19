@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { assertNoSuspiciousSecrets, assertSafeBranch, assertSafeChangedPaths, makeBrainBranch, normalizeGitHubRepository } from "../src/github-workspace.ts";
+import { extractGitHubRepositories } from "../src/source-repos.ts";
 
 const githubRuntime = readFileSync("src/github-workspace.ts", "utf8");
+const sourceRuntime = readFileSync("src/source-repos.ts", "utf8");
 const loop = readFileSync("src/loop.ts", "utf8");
 const server = readFileSync("src/server.ts", "utf8");
 const html = readFileSync("public/index.html", "utf8");
@@ -45,10 +47,22 @@ test("reviewed PASS checkpoints are the only automatic commit and push path", ()
   assert.doesNotMatch(githubRuntime, /gh[^\n]+pr[^\n]+merge/);
 });
 
-test("project creation can opt into isolated GitHub workspace and UI exposes it", () => {
+test("source repositories are extracted cloned and catalogued separately", () => {
+  assert.deepEqual(extractGitHubRepositories(["منابع: https://github.com/owner/book-sources"]), ["owner/book-sources"]);
+  assert.match(sourceRuntime, /source-repos/);
+  assert.match(sourceRuntime, /fileCount/);
+  assert.match(sourceRuntime, /categoriesFor/);
+  assert.match(server, /sourceRepositories/);
+  assert.match(server, /prepareSourceRepositories/);
+  assert.match(ui, /finalSourceRepos/);
+});
+
+test("project creation separates execution repository and preflight gate", () => {
   assert.match(server, /githubRepository/);
   assert.match(server, /prepareGitHubWorkspace/);
-  assert.match(html, /github-integration\.js\?v=0\.8\.0/);
+  assert.match(server, /hydrateRepositoriesFromProjectInputs/);
+  assert.match(html, /github-integration\.js\?v=0\.8\.1/);
   assert.match(ui, /finalGitHubRepo/);
-  assert.match(ui, /Branch امن/);
+  assert.match(ui, /skipNextAutomaticRun/);
+  assert.match(ui, /ساخت پروژه و بررسی قبل از اجرا/);
 });
