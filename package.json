@@ -10,7 +10,7 @@
     "dev": "node --watch src/server.ts",
     "test": "node --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "check:ui": "node --check public/app.js && node --check public/execution-dashboard.js && node --check public/github-integration.js && node --check public/runtime-inspector.js",
+    "check:ui": "node --check public/app.js && node --check public/stable-project-refresh.js && node --check public/execution-dashboard.js && node --check public/github-integration.js && node --check public/runtime-inspector.js",
     "ci": "npm run typecheck && npm run check:ui && npm test"
   },
   "devDependencies": {"@types/node": "^22.18.0", "typescript": "^5.9.0"}
