@@ -5,6 +5,28 @@ export type IterationStatus = "RUNNING" | "AWAITING_MANUAL_RESULT" | "PASSED" | 
 export type ReviewStatus = "PASS" | "FAIL" | "PARTIAL";
 export type FactSource = "user_explicit" | "architect_inference";
 export type SelectionMode = "single" | "multiple";
+export type TaskStatus = "PENDING" | "RUNNING" | "DONE" | "ATTENTION" | "WAITING" | "PAUSED";
+
+export interface GitHubIntegration {
+  repository: string;
+  baseBranch: string;
+  workBranch: string;
+  status: "READY" | "PUSHED" | "PR_OPEN" | "ERROR";
+  draftPrUrl: string;
+  lastPushedCommit: string;
+  lastPushAt: string;
+}
+
+export interface ResourceRepository {
+  repository: string;
+  defaultBranch: string;
+  localPath: string;
+  fileCount: number;
+  categories: string[];
+  status: "READY" | "ERROR";
+  fetchedAt: string;
+  error: string;
+}
 
 export interface ProjectDefinition {
   name: string;
@@ -34,7 +56,10 @@ export interface ProjectDefinition {
   deliveryFormats?: string[];
   executionStrategy?: string;
   executionContract?: ExecutionContract;
+  executionStages?: ExecutionStage[];
   resourceReferences?: string[];
+  resourceRepositories?: ResourceRepository[];
+  githubIntegration?: GitHubIntegration;
 }
 
 export interface ChoiceOption { id: string; label: string; note: string; }
@@ -85,8 +110,10 @@ export interface DiscoveryResult {
 export interface ExecutionStage {
   title: string;
   purpose: string;
+  tasks: string[];
   outputs: string[];
   doneWhen: string;
+  estimatedTime: string;
 }
 export interface RiskFallback { risk: string; impact: string; fallback: string; }
 export interface ExecutionContract {
@@ -170,6 +197,18 @@ export interface ProjectRecord {
 }
 
 export interface DirectiveRecord { id: string; projectId: string; text: string; active: boolean; createdAt: string; }
+export interface ProjectEvent { id: string; projectId: string; eventType: string; payload: Record<string, unknown>; createdAt: string; }
+export interface TaskRecord {
+  id: string;
+  projectId: string;
+  stageIndex: number;
+  taskIndex: number;
+  title: string;
+  status: TaskStatus;
+  iterationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
 export interface IterationRecord {
   id: string;
   projectId: string;

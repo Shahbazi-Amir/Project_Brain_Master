@@ -31,7 +31,7 @@ test("cleanup policy preserves ambiguous and important provenance by default", (
 test("Project Brain no longer embeds GitHub Control Center runtime", () => {
   assert.equal(existsSync("tools/github-control-center/server.mjs"), false);
   assert.equal(existsSync("tools/start-all.mjs"), false);
-  assert.equal(pkg.version, "0.6.1");
+  assert.equal(pkg.version, "0.8.1");
   assert.equal(pkg.scripts.start, "node src/server.ts");
   assert.equal(pkg.scripts["github:ops"], undefined);
   assert.equal(pkg.scripts["check:github-ops"], undefined);
